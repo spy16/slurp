@@ -17,6 +17,9 @@ var (
 	_ Any = Keyword("specimen")
 	_ Any = (*LinkedList)(nil)
 
+	_ Comparable = Int64(0)
+	_ Comparable = Float64(0)
+
 	_ Seq = (*LinkedList)(nil)
 )
 
@@ -104,12 +107,6 @@ type Int64 int64
 // SExpr returns a valid s-expression representing Int64.
 func (i64 Int64) SExpr() (string, error) { return i64.String(), nil }
 
-// Equals returns true if 'other' is also an integer and has same Value.
-func (i64 Int64) Equals(other Any) (bool, error) {
-	val, ok := other.(Int64)
-	return ok && (val == i64), nil
-}
-
 // Comp performs comparison against another Int64.
 func (i64 Int64) Comp(other Any) (int, error) {
 	if n, ok := other.(Int64); ok {
@@ -133,12 +130,6 @@ type Float64 float64
 
 // SExpr returns a valid s-expression representing Float64.
 func (f64 Float64) SExpr() (string, error) { return f64.String(), nil }
-
-// Equals returns true if 'other' is also a float and has same Value.
-func (f64 Float64) Equals(other Any) (bool, error) {
-	val, ok := other.(Float64)
-	return ok && (val == f64), nil
-}
 
 // Comp performs comparison against another Float64.
 func (f64 Float64) Comp(other Any) (int, error) {

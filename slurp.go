@@ -55,7 +55,7 @@ func (env *Env) Eval(form Any) (Any, error) {
 	if err != nil {
 		return nil, err
 	} else if expr == nil {
-		return nil, nil
+		return Nil{}, nil
 	}
 	return expr.Eval()
 }

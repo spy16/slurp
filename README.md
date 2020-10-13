@@ -72,5 +72,3 @@ to produce an `Expr` that can be evaluated.
 * Macro-expansion can be customised by setting a custom `Expander` implementation. See `slurp.WithExpander()`.
 * Syntax analysis can be customised (For example, to add special forms), by setting a custom
   `Analyzer` implementation. See `slurp.WithAnalyzer()`.
-
-![I've just received word that the Emperor has dissolved the MIT computer science program permanently.](https://imgs.xkcd.com/comics/lisp_cycles.png)

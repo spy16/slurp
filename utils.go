@@ -117,7 +117,7 @@ func SeqString(seq Seq, begin, end, sep string) (string, error) {
 			b.WriteString(s)
 
 		} else {
-			b.WriteString(fmt.Sprintf("%#v", item))
+			b.WriteString(fmt.Sprintf("%v", item))
 		}
 
 		b.WriteString(sep)
