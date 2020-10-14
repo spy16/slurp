@@ -89,7 +89,7 @@ func (fw *funcWrapper) String() string {
 
 func (fw *funcWrapper) argNames() []string {
 	cleanArgName := func(t reflect.Type) string {
-		return strings.Replace(t.String(), "sabre.", "", -1)
+		return strings.Replace(t.String(), "slurp.", "", -1)
 	}
 
 	var argNames []string
