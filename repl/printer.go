@@ -28,7 +28,7 @@ func (p BasicPrinter) Fprintln(w io.Writer, val interface{}) error {
 //  3. SExpr
 type Renderer struct{}
 
-// SExpr can render a parseable s-expression
+// SExpr can render a parsable s-expression.
 type SExpr interface {
 	// SExpr returns a string representation of the value, suitable for parsing with
 	// reader.Reader.
