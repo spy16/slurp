@@ -38,11 +38,11 @@ func WithAnalyzer(analyzer Analyzer) Option {
 		if analyzer == nil {
 			analyzer = &BuiltinAnalyzer{
 				Specials: map[string]ParseSpecial{
-					// "go":    parseGoExpr,
-					// "do":    parseDoExpr,
-					// "if":    parseIfExpr,
-					// "def":   parseDefExpr,
-					// "quote": parseQuoteExpr,
+					"go":    parseGoExpr,
+					"do":    parseDoExpr,
+					"if":    parseIfExpr,
+					"def":   parseDefExpr,
+					"quote": parseQuoteExpr,
 				},
 			}
 		}

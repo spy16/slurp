@@ -52,9 +52,15 @@ func (de DefExpr) Eval() (Any, error) {
 		return nil, fmt.Errorf("%w: '%s'", ErrInvalidBindName, de.Name)
 	}
 
-	val, err := de.Value.Eval()
-	if err != nil {
-		return nil, err
+	var val Any
+	var err error
+	if de.Value != nil {
+		val, err = de.Value.Eval()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		val = Nil{}
 	}
 
 	de.Env.setGlobal(de.Name, val)

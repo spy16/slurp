@@ -30,6 +30,14 @@ type Error struct {
 	Cause   error
 }
 
+// With returns a clone of the error with message set to given value.
+func (e Error) With(msg string) Error {
+	return Error{
+		Cause:   e.Cause,
+		Message: msg,
+	}
+}
+
 // Is returns true if the other error is same as the cause of this error.
 func (e Error) Is(other error) bool { return errors.Is(e.Cause, other) }
 
