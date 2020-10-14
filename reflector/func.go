@@ -56,17 +56,37 @@ type funcWrapper struct {
 }
 
 func (fw *funcWrapper) Invoke(env *slurp.Env, args ...slurp.Any) (slurp.Any, error) {
-	argVals := reflectValues(args)
+	argCount := len(args)
 	if fw.passScope {
-		argVals = append([]reflect.Value{reflect.ValueOf(env)}, argVals...)
+		// we need to pass 'env' also to the underlying function.
+		// so apart from explicitly passed arguments, one extra
+		// is needed.
+		argCount++
 	}
 
+	// allocate argument slice, including the space for 'env' argument
+	// if the function needs it.
+	argVals := make([]reflect.Value, argCount, argCount)
+	if fw.passScope {
+		argVals[0] = reflect.ValueOf(env)
+	}
+
+	// populate reflect.Value version of each argument.
+	for i, arg := range args {
+		if fw.passScope {
+			// 0th index is reserved for passing env. so offset index
+			// by 1.
+			i++
+		}
+		argVals[i] = reflect.ValueOf(arg)
+	}
+
+	// verify number of args match the required function parameters.
 	if err := fw.checkArgCount(len(argVals)); err != nil {
 		return nil, err
 	}
 
-	argVals, err := fw.convertTypes(argVals...)
-	if err != nil {
+	if err := fw.convertTypes(argVals...); err != nil {
 		return nil, err
 	}
 
@@ -106,27 +126,28 @@ func (fw *funcWrapper) argNames() []string {
 	return argNames
 }
 
-func (fw *funcWrapper) convertTypes(args ...reflect.Value) ([]reflect.Value, error) {
-	var vals []reflect.Value
+func (fw *funcWrapper) convertTypes(args ...reflect.Value) error {
+	lastArgIdx := fw.rt.NumIn() - 1
+	isVariadic := fw.rt.IsVariadic()
 
 	for i := 0; i < fw.rt.NumIn(); i++ {
-		if fw.rt.IsVariadic() && i == fw.rt.NumIn()-1 {
+		if i == lastArgIdx && isVariadic {
 			c, err := convertArgsTo(fw.rt.In(i).Elem(), args[i:]...)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			vals = append(vals, c...)
+			copy(args[i:], c)
 			break
 		}
 
 		c, err := convertArgsTo(fw.rt.In(i), args[i])
 		if err != nil {
-			return nil, err
+			return err
 		}
-		vals = append(vals, c...)
+		args[i] = c[0]
 	}
 
-	return vals, nil
+	return nil
 }
 
 func (fw *funcWrapper) checkArgCount(count int) error {
@@ -165,8 +186,13 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (slurp.Any, error) {
 		}
 	}
 
-	wrapped := slurpValues(vals[0 : fw.lastOutIdx+1])
-	if len(wrapped) == 1 {
+	retValCount := len(vals[0 : fw.lastOutIdx+1])
+	wrapped := make([]slurp.Any, retValCount, retValCount)
+	for i := 0; i < retValCount; i++ {
+		wrapped[i] = vals[i].Interface()
+	}
+
+	if retValCount == 1 {
 		return wrapped[0], nil
 	}
 
@@ -174,17 +200,17 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (slurp.Any, error) {
 }
 
 func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Value, error) {
-	var converted []reflect.Value
-	for _, arg := range args {
+	converted := make([]reflect.Value, len(args), len(args))
+	for i, arg := range args {
 		actual := arg.Type()
-		switch {
-		case isAssignable(actual, expected):
-			converted = append(converted, arg)
-
-		case actual.ConvertibleTo(expected):
-			converted = append(converted, arg.Convert(expected))
-
-		default:
+		isAssignable := (actual == expected) ||
+			actual.AssignableTo(expected) ||
+			(expected.Kind() == reflect.Interface && actual.Implements(expected))
+		if isAssignable {
+			converted[i] = arg
+		} else if actual.ConvertibleTo(expected) {
+			converted[i] = arg.Convert(expected)
+		} else {
 			return args, fmt.Errorf(
 				"value of type '%s' cannot be converted to '%s'",
 				actual, expected,
@@ -193,11 +219,6 @@ func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Valu
 	}
 
 	return converted, nil
-}
-
-func isAssignable(from, to reflect.Type) bool {
-	return (from == to) || from.AssignableTo(to) ||
-		(to.Kind() == reflect.Interface && from.Implements(to))
 }
 
 func reflectValues(args []slurp.Any) []reflect.Value {

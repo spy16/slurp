@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var unknownErr = errors.New("failed")
+var errUnknown = errors.New("failed")
 
 func TestConstExpr_Eval(t *testing.T) {
 	t.Parallel()
@@ -56,10 +56,10 @@ func TestDoExpr_Eval(t *testing.T) {
 			title: "ExprEvalFail",
 			expr: func() (Expr, *Env) {
 				return DoExpr{Exprs: []Expr{
-					fakeExpr{Err: unknownErr},
+					fakeExpr{Err: errUnknown},
 				}}, nil
 			},
-			wantErr: unknownErr,
+			wantErr: errUnknown,
 		},
 		{
 			title: "MultipleExpr",
@@ -102,11 +102,11 @@ func TestDefExpr_Eval(t *testing.T) {
 				e := New()
 				return DefExpr{
 					Name:  "foo",
-					Value: fakeExpr{Err: unknownErr},
+					Value: fakeExpr{Err: errUnknown},
 					Env:   e,
 				}, e
 			},
-			wantErr: unknownErr,
+			wantErr: errUnknown,
 		},
 		{
 			title: "ExprValue",
@@ -170,10 +170,10 @@ func TestIfExpr_Eval(t *testing.T) {
 			title: "TestEvalErr",
 			expr: func() (Expr, *Env) {
 				return IfExpr{
-					Test: fakeExpr{Err: unknownErr},
+					Test: fakeExpr{Err: errUnknown},
 				}, New()
 			},
-			wantErr: unknownErr,
+			wantErr: errUnknown,
 		},
 		{
 			title: "Else",
@@ -195,10 +195,10 @@ func TestInvokeExpr_Eval(t *testing.T) {
 			title: "TargetEvalErr",
 			expr: func() (Expr, *Env) {
 				return &InvokeExpr{
-					Target: fakeExpr{Err: unknownErr},
+					Target: fakeExpr{Err: errUnknown},
 				}, New()
 			},
-			wantErr: unknownErr,
+			wantErr: errUnknown,
 		},
 		{
 			title: "NonInvokable",
@@ -238,11 +238,11 @@ func TestInvokeExpr_Eval(t *testing.T) {
 				return &InvokeExpr{
 					Target: ConstExpr{Const: fakeInvokable(nil)},
 					Args: []Expr{
-						fakeExpr{Err: unknownErr},
+						fakeExpr{Err: errUnknown},
 					},
 				}, New()
 			},
-			wantErr: unknownErr,
+			wantErr: errUnknown,
 		},
 	})
 }

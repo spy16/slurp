@@ -83,8 +83,45 @@ func TestEnv_Resolve(t *testing.T) {
 	assert(t, got == true, "want=true got=%#v", got)
 }
 
-func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
+func Benchmark_Eval_QuoteForm(b *testing.B) {
+	env := New()
+	quoteForm := QuoteExpr{Form: NewList(1, 2, 3)}
+
+	for i := 0; i < b.N; i++ {
+		_, err := env.Eval(quoteForm)
+		if err != nil {
+			b.Fatalf("eval failed: %v", err)
+		}
+	}
+}
+
+func Benchmark_Eval_Invocation(b *testing.B) {
+	env := New()
+	invocation := InvokeExpr{
+		Env:  env,
+		Name: "test",
+		Target: ConstExpr{Const: fakeInvokable(func(env *Env, args ...Any) (Any, error) {
+			return 10, nil
+		})},
+	}
+
+	var finalRes Any
+	for i := 0; i < b.N; i++ {
+		res, err := env.Eval(invocation)
+		if err != nil {
+			b.Fatalf("eval failed: %v", err)
+		}
+		finalRes = res
+	}
+	assert(b, finalRes == 10, "want=10, got=%#v", finalRes)
+}
+
+func assert(t testInstance, cond bool, msg string, args ...interface{}) {
 	if !cond {
 		t.Errorf(msg, args...)
 	}
+}
+
+type testInstance interface {
+	Errorf(msg string, args ...interface{})
 }

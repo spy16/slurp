@@ -17,4 +17,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Fetch dependencies, verify build and test
-        run: make build test benchmark
+        run: make build test
+
+      - name: Run Benchmarks
+        run: make benchmark
