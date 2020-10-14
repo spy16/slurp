@@ -1,7 +1,7 @@
 VERSION="`git describe --abbrev=0 --tags`"
 COMMIT="`git rev-list -1 --abbrev-commit HEAD`"
 
-all: clean fmt test
+all: clean fmt build test
 
 fmt:
 	@echo "Formatting..."
@@ -22,3 +22,7 @@ test-verbose:
 benchmark:
 	@echo "Running benchmarks..."
 	@go test -benchmem -run="none" -bench="Benchmark.*" -v ./...
+
+build:
+	@echo "Running build..."
+	@go build ./...
