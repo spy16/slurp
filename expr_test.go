@@ -2,6 +2,7 @@ package slurp
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -187,6 +188,65 @@ func TestIfExpr_Eval(t *testing.T) {
 	})
 }
 
+func TestInvokeExpr_Eval(t *testing.T) {
+	t.Parallel()
+	runExprTests(t, []exprTest{
+		{
+			title: "TargetEvalErr",
+			expr: func() (Expr, *Env) {
+				return &InvokeExpr{
+					Target: fakeExpr{Err: unknownErr},
+				}, New()
+			},
+			wantErr: unknownErr,
+		},
+		{
+			title: "NonInvokable",
+			expr: func() (Expr, *Env) {
+				e := New()
+				return &InvokeExpr{
+					Env:    e,
+					Target: ConstExpr{Const: 10},
+				}, e
+			},
+			wantErr: ErrNotInvokable,
+		},
+		{
+			title: "InvokeWithArgs",
+			expr: func() (Expr, *Env) {
+				e := New()
+				return &InvokeExpr{
+					Env:  e,
+					Name: "foo",
+					Target: ConstExpr{Const: fakeInvokable(func(env *Env, args ...Any) (Any, error) {
+						got := env.stack[len(env.stack)-1].Name
+						if got != "foo" {
+							return nil, fmt.Errorf("stack name expected to be \"foo\", got \"%s\"", got)
+						}
+						return args[0], nil
+					})},
+					Args: []Expr{
+						ConstExpr{Const: 10},
+					},
+				}, e
+			},
+			want: 10,
+		},
+		{
+			title: "ArgEvalErr",
+			expr: func() (Expr, *Env) {
+				return &InvokeExpr{
+					Target: ConstExpr{Const: fakeInvokable(nil)},
+					Args: []Expr{
+						fakeExpr{Err: unknownErr},
+					},
+				}, New()
+			},
+			wantErr: unknownErr,
+		},
+	})
+}
+
 func runExprTests(t *testing.T, table []exprTest) {
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
@@ -223,3 +283,9 @@ type fakeExpr struct {
 }
 
 func (f fakeExpr) Eval() (Any, error) { return f.Res, f.Err }
+
+type fakeInvokable func(env *Env, args ...Any) (Any, error)
+
+func (f fakeInvokable) Invoke(env *Env, args ...Any) (Any, error) {
+	return f(env, args...)
+}

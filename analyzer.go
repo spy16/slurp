@@ -41,9 +41,6 @@ func (ba BuiltinAnalyzer) Analyze(env *Env, form Any) (Expr, error) {
 		}
 
 		return ba.analyzeSeq(env, f)
-
-	case Int64, Float64, Bool, Char, String, Keyword:
-		return ConstExpr{Const: form}, nil
 	}
 
 	return ConstExpr{Const: form}, nil
@@ -71,7 +68,10 @@ func (ba BuiltinAnalyzer) analyzeSeq(env *Env, seq Seq) (Expr, error) {
 
 	// Call target is not a special form and must be a Invokable. Analyze
 	// the arguments and create an InvokeExpr.
-	ie := InvokeExpr{Name: fmt.Sprintf("%s", first)}
+	ie := InvokeExpr{
+		Env:  env,
+		Name: fmt.Sprintf("%v", first),
+	}
 	err = ForEach(seq, func(item Any) (done bool, err error) {
 		if ie.Target == nil {
 			ie.Target, err = ba.Analyze(env, first)
