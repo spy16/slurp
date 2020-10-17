@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/spy16/slurp/core"
 )
@@ -66,7 +67,19 @@ func (fn Fn) Compare(v core.Any) (bool, error) {
 }
 
 func (fn Fn) String() string {
-	return fmt.Sprintf("Fn{name='%s'}", fn.Name)
+	buf := strings.Builder{}
+	buf.WriteString("(fn ")
+	if fn.Name != "" {
+		buf.WriteString(fn.Name + " ")
+	}
+
+	if fn.Doc != "" {
+		buf.WriteString(fmt.Sprintf("\n  \"%s\"", fn.Doc))
+	}
+
+	buf.WriteString(")")
+
+	return buf.String()
 }
 
 func (fn Fn) selectFunc(args []core.Any) (Func, error) {

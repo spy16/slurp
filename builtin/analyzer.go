@@ -15,10 +15,35 @@ func NewAnalyzer() *Analyzer {
 			"go":    parseGo,
 			"do":    parseDo,
 			"if":    parseIf,
-			"def":   parseDef,
-			"quote": parseQuote,
 			"fn":    parseFn,
+			"def":   parseDef,
 			"macro": parseMacro,
+			"quote": parseQuote,
+			"list": func(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+				var items []core.Expr
+				err := ForEach(args, func(item core.Any) (bool, error) {
+					ex, err := a.Analyze(env, item)
+					if err != nil {
+						return false, err
+					}
+					items = append(items, ex)
+					return false, nil
+				})
+				return listExpr{Items: items}, err
+			},
+			"syntax-quote": func(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+				form, err := args.First()
+				if err != nil {
+					return nil, err
+				}
+
+				f, err := quoteExpand(a, env, form)
+				if err != nil {
+					return nil, err
+				}
+
+				return a.Analyze(env, f)
+			},
 		},
 	}
 }

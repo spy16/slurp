@@ -2,21 +2,32 @@ package slurp
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 	"github.com/spy16/slurp/reader"
+	"github.com/spy16/slurp/reflector"
 )
 
 // New returns a new slurp interpreter session.
 func New(globals map[string]core.Any) *Instance {
 	buf := bytes.Buffer{}
-	return &Instance{
+	ins := &Instance{
 		buf:      &buf,
 		reader:   reader.New(&buf),
 		env:      core.New(globals),
 		analyzer: builtin.NewAnalyzer(),
 	}
+
+	globals["macroexpand"] = reflector.Func("macroexpand", func(form core.Any) (core.Any, error) {
+		f, err := builtin.MacroExpand(ins.analyzer, ins.env, form)
+		if errors.Is(err, builtin.ErrNoExpand) {
+			return form, nil
+		}
+		return f, err
+	})
+	return ins
 }
 
 // Instance represents a Slurp interpreter session.

@@ -34,7 +34,7 @@ func Test_parseDo(t *testing.T) {
 			env:     core.New(nil),
 			args:    NewList(1, NewList(Symbol("def"))),
 			want:    nil,
-			wantErr: ErrSpecialForm,
+			wantErr: ErrParseSpecial,
 		},
 	}
 
@@ -52,13 +52,13 @@ func Test_parseDef(t *testing.T) {
 		{
 			title:   "NilArgs",
 			args:    nil,
-			wantErr: ErrSpecialForm,
+			wantErr: ErrParseSpecial,
 		},
 		{
 			title:   "SomeArgs",
 			args:    NewList(1, 2),
 			want:    nil,
-			wantErr: ErrSpecialForm,
+			wantErr: ErrParseSpecial,
 		},
 		{
 			title: "Valid",
