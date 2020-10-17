@@ -4,13 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/spy16/slurp/core"
 )
 
-// ErrSpecialForm is returned when parsing a special form invocation
+// ErrParseSpecial is returned when parsing a special form invocation
 // fails due to malformed syntax.
-var ErrSpecialForm = errors.New("invalid sepcial form")
+var ErrParseSpecial = errors.New("invalid sepcial form")
 
 func parseDo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	var de DoExpr
@@ -34,7 +35,7 @@ func parseIf(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	} else if count != 2 && count != 3 {
 		return nil, Error{
-			Cause:   fmt.Errorf("%w: if", ErrSpecialForm),
+			Cause:   fmt.Errorf("%w: if", ErrParseSpecial),
 			Message: fmt.Sprintf("requires 2 or 3 arguments, got %d", count),
 		}
 	}
@@ -70,7 +71,7 @@ func parseQuote(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	} else if count != 1 {
 		return nil, Error{
-			Cause:   errors.New("invalid quote form"),
+			Cause:   fmt.Errorf("%w: quote", ErrParseSpecial),
 			Message: fmt.Sprintf("requires exactly 1 argument, got %d", count),
 		}
 	}
@@ -80,13 +81,11 @@ func parseQuote(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return QuoteExpr{
-		Form: first,
-	}, nil
+	return QuoteExpr{Form: first}, nil
 }
 
 func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
-	e := Error{Cause: fmt.Errorf("%w: def", ErrSpecialForm)}
+	e := Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
 
 	if args == nil {
 		return nil, e.With("requires exactly 2 args, got 0")
@@ -132,6 +131,11 @@ func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 }
 
 func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+	count, err := args.Count()
+	if err != nil {
+		return nil, err
+	}
+
 	v, err := args.First()
 	if err != nil {
 		return nil, err
@@ -139,7 +143,8 @@ func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 
 	if v == nil {
 		return nil, Error{
-			Cause: errors.New("go expr requires exactly one argument"),
+			Cause:   fmt.Errorf("%w: go", ErrParseSpecial),
+			Message: fmt.Sprintf("requires exactly 1 argument, got %d", count),
 		}
 	}
 
@@ -151,6 +156,8 @@ func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	return GoExpr{Form: e}, nil
 }
 
+// parseFn parses (fn name? doc? (<params>*) <body>*) special form and
+// returns an Fn definition.
 func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
@@ -159,6 +166,8 @@ func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
 	return &ConstExpr{Const: *fn}, nil
 }
 
+// parseMacro parses (macro name? doc? (<params>*) <body>*) special form and
+// returns an Fn definition.
 func parseMacro(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
@@ -174,8 +183,8 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 	cnt, err := argSeq.Count()
 	if err != nil {
 		return nil, err
-	} else if cnt < 2 {
-		return nil, fmt.Errorf("%w: got %d, want at-least 2", ErrArity, cnt)
+	} else if cnt < 1 {
+		return nil, fmt.Errorf("%w: got %d, want at-least 1", ErrArity, cnt)
 	}
 
 	args, err := toSlice(argSeq)
@@ -185,7 +194,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 
 	i := 0
 	if sym, ok := args[i].(Symbol); ok {
-		fn.Name = sym.String()
+		fn.Name = strings.TrimSpace(sym.String())
 		i++
 	}
 
@@ -193,6 +202,8 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 		fn.Doc = string(str)
 		i++
 	}
+
+	// TODO: add support for multi-arity parsing.
 
 	fnArgs, ok := args[i].(*LinkedList)
 	if !ok {

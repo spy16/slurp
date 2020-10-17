@@ -24,12 +24,28 @@ type ConstExpr struct{ Const core.Any }
 // Eval returns the constant value unmodified.
 func (ce ConstExpr) Eval(_ core.Env) (core.Any, error) { return ce.Const, nil }
 
+type listExpr struct {
+	Items []core.Expr
+}
+
+func (le listExpr) Eval(env core.Env) (core.Any, error) {
+	vals := []core.Any{}
+	for _, itm := range le.Items {
+		v, err := itm.Eval(env)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, v)
+	}
+	return NewList(vals...), nil
+}
+
 // QuoteExpr expression represents a quoted form and
-type QuoteExpr struct{ Form core.Any }
+type QuoteExpr struct {
+	Form core.Any
+}
 
 // Eval returns the quoted form unmodified.
-//
-// TODO: re-use this for syntax-quote and unquote?
 func (qe QuoteExpr) Eval(_ core.Env) (core.Any, error) { return qe.Form, nil }
 
 type DefExpr struct {

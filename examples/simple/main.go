@@ -12,12 +12,13 @@ import (
 )
 
 var globals = map[string]core.Any{
-	"nil":       builtin.Nil{},
-	"true":      builtin.Bool(true),
-	"false":     builtin.Bool(false),
-	"*version*": builtin.String("1.0"),
+	"nil":     builtin.Nil{},
+	"true":    builtin.Bool(true),
+	"false":   builtin.Bool(false),
+	"version": builtin.String("1.0"),
 
 	// custom Go functions.
+	"=": reflector.Func("=", builtin.Eq),
 	"+": reflector.Func("sum", func(a ...int) int {
 		sum := 0
 		for _, item := range a {
