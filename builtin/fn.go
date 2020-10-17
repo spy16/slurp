@@ -20,6 +20,7 @@ type Fn struct {
 	Name  string
 	Doc   string
 	Funcs []Func
+	Macro bool
 }
 
 // Invoke selects and executes a func defined in the Fn and returns

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spy16/slurp/core"
@@ -17,6 +18,7 @@ func NewAnalyzer() *Analyzer {
 			"def":   parseDef,
 			"quote": parseQuote,
 			"fn":    parseFn,
+			"macro": parseMacro,
 		},
 	}
 }
@@ -38,7 +40,15 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 		return ConstExpr{Const: Nil{}}, nil
 	}
 
-	switch f := form.(type) {
+	exp, err := MacroExpand(ba, env, form)
+	if err != nil {
+		if !errors.Is(err, ErrNoExpand) {
+			return nil, err
+		}
+		exp = form
+	}
+
+	switch f := exp.(type) {
 	case Symbol:
 		return ResolveExpr{Symbol: f}, nil
 
@@ -53,7 +63,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 		return ba.analyzeSeq(env, f)
 	}
 
-	return ConstExpr{Const: form}, nil
+	return ConstExpr{Const: exp}, nil
 }
 
 func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
