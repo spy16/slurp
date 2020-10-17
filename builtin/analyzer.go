@@ -1,34 +1,47 @@
-package slurp
+package builtin
 
-import "fmt"
+import (
+	"fmt"
 
-var _ Analyzer = (*BuiltinAnalyzer)(nil)
+	"github.com/spy16/slurp/core"
+)
 
-// BuiltinAnalyzer parses builtin value forms and returns Expr that can
+// NewAnalyzer returns an instance of Analyzer with builtin specia form
+// parsers.
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{
+		Specials: map[string]ParseSpecial{
+			"go":    parseGoExpr,
+			"do":    parseDoExpr,
+			"if":    parseIfExpr,
+			"def":   parseDefExpr,
+			"quote": parseQuoteExpr,
+		},
+	}
+}
+
+// Analyzer parses builtin value forms and returns Expr that can
 // be evaluated against Env.
-type BuiltinAnalyzer struct {
+type Analyzer struct {
 	Specials map[string]ParseSpecial
 }
 
 // ParseSpecial validates a special form invocation, parse the form and
 // returns an expression that can be evaluated for result.
-type ParseSpecial func(env *Env, args Seq) (Expr, error)
+type ParseSpecial func(analyzer core.Analyzer, env core.Env, args Seq) (core.Expr, error)
 
 // Analyze performs syntactic analysis of given form and returns an Expr
 // that can be evaluated for result against an Env.
-func (ba BuiltinAnalyzer) Analyze(env *Env, form Any) (Expr, error) {
+func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	if IsNil(form) {
 		return ConstExpr{Const: Nil{}}, nil
 	}
 
 	switch f := form.(type) {
 	case Symbol:
-		v := env.Resolve(string(f))
-		if v == nil {
-			return nil, Error{
-				Cause:   ErrNotFound,
-				Message: string(f),
-			}
+		v, err := env.Resolve(string(f))
+		if err != nil {
+			return nil, err
 		}
 		return ConstExpr{Const: v}, nil
 
@@ -46,7 +59,7 @@ func (ba BuiltinAnalyzer) Analyze(env *Env, form Any) (Expr, error) {
 	return ConstExpr{Const: form}, nil
 }
 
-func (ba BuiltinAnalyzer) analyzeSeq(env *Env, seq Seq) (Expr, error) {
+func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
 	//	Get the call target.  This is the first item in the sequence.
 	first, err := seq.First()
 	if err != nil {
@@ -62,23 +75,22 @@ func (ba BuiltinAnalyzer) analyzeSeq(env *Env, seq Seq) (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			return parse(env, next)
+			return parse(ba, env, next)
 		}
 	}
 
 	// Call target is not a special form and must be a Invokable. Analyze
 	// the arguments and create an InvokeExpr.
 	ie := InvokeExpr{
-		Env:  env,
 		Name: fmt.Sprintf("%v", first),
 	}
-	err = ForEach(seq, func(item Any) (done bool, err error) {
+	err = ForEach(seq, func(item core.Any) (done bool, err error) {
 		if ie.Target == nil {
 			ie.Target, err = ba.Analyze(env, first)
 			return
 		}
 
-		var arg Expr
+		var arg core.Expr
 		if arg, err = ba.Analyze(env, item); err == nil {
 			ie.Args = append(ie.Args, arg)
 		}

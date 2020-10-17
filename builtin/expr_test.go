@@ -1,10 +1,11 @@
-package slurp
+package builtin
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/spy16/slurp/core"
 )
 
 var errUnknown = errors.New("failed")
@@ -14,7 +15,7 @@ func TestConstExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "SomeValue",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return ConstExpr{Const: 10}, nil
 			},
 			want: 10,
@@ -27,7 +28,7 @@ func TestQuoteExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "SomeValue",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return QuoteExpr{Form: 10}, nil
 			},
 			want: 10,
@@ -40,22 +41,22 @@ func TestDoExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "EmptyDo",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return DoExpr{Exprs: nil}, nil
 			},
 			want: Nil{},
 		},
 		{
 			title: "WithSingleExpr",
-			expr: func() (Expr, *Env) {
-				return DoExpr{Exprs: []Expr{ConstExpr{Const: 10}}}, nil
+			expr: func() (core.Expr, core.Env) {
+				return DoExpr{Exprs: []core.Expr{ConstExpr{Const: 10}}}, nil
 			},
 			want: 10,
 		},
 		{
 			title: "ExprEvalFail",
-			expr: func() (Expr, *Env) {
-				return DoExpr{Exprs: []Expr{
+			expr: func() (core.Expr, core.Env) {
+				return DoExpr{Exprs: []core.Expr{
 					fakeExpr{Err: errUnknown},
 				}}, nil
 			},
@@ -63,8 +64,8 @@ func TestDoExpr_Eval(t *testing.T) {
 		},
 		{
 			title: "MultipleExpr",
-			expr: func() (Expr, *Env) {
-				return DoExpr{Exprs: []Expr{
+			expr: func() (core.Expr, core.Env) {
+				return DoExpr{Exprs: []core.Expr{
 					ConstExpr{Const: 10},
 					ConstExpr{Const: "foo"},
 				}}, nil
@@ -79,49 +80,46 @@ func TestDefExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "NoName",
-			expr: func() (Expr, *Env) {
-				return DefExpr{}, New()
+			expr: func() (core.Expr, core.Env) {
+				return DefExpr{}, core.New(nil)
 			},
-			wantErr: ErrInvalidBindName,
+			wantErr: core.ErrInvalidBindName,
 		},
 		{
 			title: "NilValue",
-			expr: func() (Expr, *Env) {
-				e := New()
-				return DefExpr{Name: "foo", Env: e}, e
+			expr: func() (core.Expr, core.Env) {
+				return DefExpr{Name: "foo"}, core.New(nil)
 			},
 			want: Symbol("foo"),
-			assert: func(t *testing.T, got Any, err error, env *Env) {
-				assert(t, env.Resolve("foo") == Nil{},
-					"expecting Nil{}, got %#v", env.Resolve("foo"))
+			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
+				v, err := env.Resolve("foo")
+				assert(t, err == nil, "unexpected error: %#v", err)
+				assert(t, v == Nil{}, "expecting Nil{}, got %#v", v)
 			},
 		},
 		{
 			title: "ExprEvalErr",
-			expr: func() (Expr, *Env) {
-				e := New()
+			expr: func() (core.Expr, core.Env) {
 				return DefExpr{
 					Name:  "foo",
 					Value: fakeExpr{Err: errUnknown},
-					Env:   e,
-				}, e
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
 		{
 			title: "ExprValue",
-			expr: func() (Expr, *Env) {
-				e := New()
+			expr: func() (core.Expr, core.Env) {
 				return DefExpr{
 					Name:  "foo",
 					Value: ConstExpr{Const: 10},
-					Env:   e,
-				}, e
+				}, core.New(nil)
 			},
 			want: Symbol("foo"),
-			assert: func(t *testing.T, got Any, err error, env *Env) {
-				assert(t, env.Resolve("foo") == 10,
-					"expecting 10, got %#v", env.Resolve("foo"))
+			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
+				v, err := env.Resolve("foo")
+				assert(t, err == nil, "unexpected error: %#v", err)
+				assert(t, v == 10, "expecting 10, got %#v", v)
 			},
 		},
 	})
@@ -133,55 +131,55 @@ func TestIfExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "EmptyIf",
-			expr: func() (Expr, *Env) {
-				return IfExpr{}, New()
+			expr: func() (core.Expr, core.Env) {
+				return IfExpr{}, core.New(nil)
 			},
 			want: Nil{},
 		},
 		{
 			title: "WithoutThen",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: true},
-				}, New()
+				}, core.New(nil)
 			},
 			want: Nil{},
 		},
 		{
 			title: "WithoutElse",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: false},
-				}, New()
+				}, core.New(nil)
 			},
 			want: Nil{},
 		},
 		{
 			title: "Then",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: true},
 					Then: ConstExpr{Const: "hello"},
-				}, New()
+				}, core.New(nil)
 			},
 			want: "hello",
 		},
 		{
 			title: "TestEvalErr",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: fakeExpr{Err: errUnknown},
-				}, New()
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
 		{
 			title: "Else",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: false},
 					Else: ConstExpr{Const: "else-case"},
-				}, New()
+				}, core.New(nil)
 			},
 			want: "else-case",
 		},
@@ -193,39 +191,32 @@ func TestInvokeExpr_Eval(t *testing.T) {
 	runExprTests(t, []exprTest{
 		{
 			title: "TargetEvalErr",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return &InvokeExpr{
 					Target: fakeExpr{Err: errUnknown},
-				}, New()
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
 		{
 			title: "NonInvokable",
-			expr: func() (Expr, *Env) {
-				e := New()
+			expr: func() (core.Expr, core.Env) {
 				return &InvokeExpr{
-					Env:    e,
 					Target: ConstExpr{Const: 10},
-				}, e
+				}, core.New(nil)
 			},
 			wantErr: ErrNotInvokable,
 		},
 		{
 			title: "InvokeWithArgs",
-			expr: func() (Expr, *Env) {
-				e := New()
+			expr: func() (core.Expr, core.Env) {
+				e := core.New(nil)
 				return &InvokeExpr{
-					Env:  e,
 					Name: "foo",
-					Target: ConstExpr{Const: fakeInvokable(func(env *Env, args ...Any) (Any, error) {
-						got := env.stack[len(env.stack)-1].Name
-						if got != "foo" {
-							return nil, fmt.Errorf("stack name expected to be \"foo\", got \"%s\"", got)
-						}
+					Target: ConstExpr{Const: fakeInvokable(func(args ...core.Any) (core.Any, error) {
 						return args[0], nil
 					})},
-					Args: []Expr{
+					Args: []core.Expr{
 						ConstExpr{Const: 10},
 					},
 				}, e
@@ -234,13 +225,13 @@ func TestInvokeExpr_Eval(t *testing.T) {
 		},
 		{
 			title: "ArgEvalErr",
-			expr: func() (Expr, *Env) {
+			expr: func() (core.Expr, core.Env) {
 				return &InvokeExpr{
 					Target: ConstExpr{Const: fakeInvokable(nil)},
-					Args: []Expr{
+					Args: []core.Expr{
 						fakeExpr{Err: errUnknown},
 					},
-				}, New()
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
@@ -251,7 +242,7 @@ func runExprTests(t *testing.T, table []exprTest) {
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
 			expr, env := tt.expr()
-			got, err := expr.Eval()
+			got, err := expr.Eval(env)
 			if tt.wantErr != nil {
 				assert(t, errors.Is(err, tt.wantErr),
 					"wantErr=%#v\ngotErr=%#v", tt.wantErr, got)
@@ -271,21 +262,27 @@ func runExprTests(t *testing.T, table []exprTest) {
 
 type exprTest struct {
 	title   string
-	expr    func() (Expr, *Env)
-	want    Any
+	expr    func() (core.Expr, core.Env)
+	want    core.Any
 	wantErr error
-	assert  func(t *testing.T, got Any, err error, env *Env)
+	assert  func(t *testing.T, got core.Any, err error, env core.Env)
 }
 
 type fakeExpr struct {
-	Res Any
+	Res core.Any
 	Err error
 }
 
-func (f fakeExpr) Eval() (Any, error) { return f.Res, f.Err }
+func (f fakeExpr) Eval(_ core.Env) (core.Any, error) { return f.Res, f.Err }
 
-type fakeInvokable func(env *Env, args ...Any) (Any, error)
+type fakeInvokable func(args ...core.Any) (core.Any, error)
 
-func (f fakeInvokable) Invoke(env *Env, args ...Any) (Any, error) {
-	return f(env, args...)
+func (f fakeInvokable) Invoke(args ...core.Any) (core.Any, error) {
+	return f(args...)
+}
+
+func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
+	if !cond {
+		t.Errorf(msg, args...)
+	}
 }

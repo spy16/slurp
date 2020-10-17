@@ -8,15 +8,15 @@ import (
 	"io"
 	"strings"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/core"
 	"github.com/spy16/slurp/reader"
 )
 
 // New returns a new instance of REPL with given slurp Env. Option values
 // can be used to configure REPL input, output etc.
-func New(env *slurp.Env, opts ...Option) *REPL {
+func New(exec Evaluator, opts ...Option) *REPL {
 	repl := &REPL{
-		rootEnv:   env,
+		exec:      exec,
 		currentNS: func() string { return "" },
 	}
 
@@ -27,9 +27,14 @@ func New(env *slurp.Env, opts ...Option) *REPL {
 	return repl
 }
 
+// Evaluator implementation is responsible for executing givenn forms.
+type Evaluator interface {
+	Eval(form core.Any) (core.Any, error)
+}
+
 // REPL implements a read-eval-print loop for a generic Runtime.
 type REPL struct {
-	rootEnv     *slurp.Env
+	exec        Evaluator
 	input       Input
 	output      io.Writer
 	mapInputErr ErrMapper
@@ -86,7 +91,7 @@ func (repl *REPL) readEvalPrint() error {
 		return nil
 	}
 
-	res, err := slurp.EvalAll(repl.rootEnv, forms)
+	res, err := evalAll(repl.exec, forms)
 	if err != nil {
 		return repl.print(err)
 	}
@@ -109,7 +114,7 @@ func (repl *REPL) print(v interface{}) error {
 	return repl.printer.Fprintln(repl.output, v)
 }
 
-func (repl *REPL) read() ([]slurp.Any, error) {
+func (repl *REPL) read() ([]core.Any, error) {
 	var src string
 	lineNo := 1
 
@@ -165,4 +170,16 @@ func (repl *REPL) printBanner() {
 	if repl.banner != "" {
 		fmt.Println(repl.banner)
 	}
+}
+
+func evalAll(exec Evaluator, vals []core.Any) ([]core.Any, error) {
+	res := make([]core.Any, 0, len(vals))
+	for _, form := range vals {
+		form, err := exec.Eval(form)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, form)
+	}
+	return res, nil
 }

@@ -1,11 +1,14 @@
 package reader
 
-import "github.com/spy16/slurp"
+import (
+	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp/core"
+)
 
-var defaultSymTable = map[string]slurp.Any{
-	"nil":   slurp.Nil{},
-	"true":  slurp.Bool(true),
-	"false": slurp.Bool(false),
+var defaultSymTable = map[string]core.Any{
+	"nil":   builtin.Nil{},
+	"true":  builtin.Bool(true),
+	"false": builtin.Bool(false),
 }
 
 // Option values can be used with New() to configure the reader during init.
@@ -35,7 +38,7 @@ func WithSymbolReader(m Macro) Option {
 
 // WithBuiltinSymbolReader configures the default symbol reader with given
 // symbol table.
-func WithBuiltinSymbolReader(symTable map[string]slurp.Any) Option {
+func WithBuiltinSymbolReader(symTable map[string]core.Any) Option {
 	m := symbolReader(symTable)
 	return func(rd *Reader) {
 		rd.symReader = m

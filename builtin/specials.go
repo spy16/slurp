@@ -1,19 +1,21 @@
-package slurp
+package builtin
 
 import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/spy16/slurp/core"
 )
 
 // ErrSpecialForm is returned when parsing a special form invocation
 // fails due to malformed syntax.
 var ErrSpecialForm = errors.New("invalid sepcial form")
 
-func parseDoExpr(env *Env, args Seq) (Expr, error) {
+func parseDoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	var de DoExpr
-	err := ForEach(args, func(item Any) (bool, error) {
-		expr, err := env.Analyze(item)
+	err := ForEach(args, func(item core.Any) (bool, error) {
+		expr, err := a.Analyze(env, item)
 		if err != nil {
 			return true, err
 		}
@@ -26,7 +28,7 @@ func parseDoExpr(env *Env, args Seq) (Expr, error) {
 	return de, nil
 }
 
-func parseIfExpr(env *Env, args Seq) (Expr, error) {
+func parseIfExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -37,14 +39,14 @@ func parseIfExpr(env *Env, args Seq) (Expr, error) {
 		}
 	}
 
-	exprs := [3]Expr{}
+	exprs := [3]core.Expr{}
 	for i := 0; i < count; i++ {
 		f, err := args.First()
 		if err != nil {
 			return nil, err
 		}
 
-		expr, err := env.Analyze(f)
+		expr, err := a.Analyze(env, f)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +65,7 @@ func parseIfExpr(env *Env, args Seq) (Expr, error) {
 	}, nil
 }
 
-func parseQuoteExpr(_ *Env, args Seq) (Expr, error) {
+func parseQuoteExpr(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 	if count, err := args.Count(); err != nil {
 		return nil, err
 	} else if count != 1 {
@@ -83,7 +85,7 @@ func parseQuoteExpr(_ *Env, args Seq) (Expr, error) {
 	}, nil
 }
 
-func parseDefExpr(env *Env, args Seq) (Expr, error) {
+func parseDefExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	e := Error{Cause: fmt.Errorf("%w: def", ErrSpecialForm)}
 
 	if args == nil {
@@ -118,19 +120,18 @@ func parseDefExpr(env *Env, args Seq) (Expr, error) {
 		return nil, err
 	}
 
-	res, err := env.Analyze(second)
+	res, err := a.Analyze(env, second)
 	if err != nil {
 		return nil, err
 	}
 
 	return &DefExpr{
-		Env:   env,
 		Name:  string(sym),
 		Value: res,
 	}, nil
 }
 
-func parseGoExpr(env *Env, args Seq) (Expr, error) {
+func parseGoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	v, err := args.First()
 	if err != nil {
 		return nil, err
@@ -142,5 +143,10 @@ func parseGoExpr(env *Env, args Seq) (Expr, error) {
 		}
 	}
 
-	return GoExpr{Env: env, Form: v}, nil
+	e, err := a.Analyze(env, v)
+	if err != nil {
+		return nil, err
+	}
+
+	return GoExpr{Form: e}, nil
 }
