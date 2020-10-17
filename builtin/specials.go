@@ -152,6 +152,23 @@ func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 }
 
 func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
+	fn, err := parseFnDef(a, env, argSeq)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstExpr{Const: *fn}, nil
+}
+
+func parseMacro(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
+	fn, err := parseFnDef(a, env, argSeq)
+	if err != nil {
+		return nil, err
+	}
+	fn.Macro = true
+	return &ConstExpr{Const: *fn}, nil
+}
+
+func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 	fn := Fn{}
 
 	cnt, err := argSeq.Count()
@@ -216,7 +233,8 @@ func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
 
 	fn.Env = fnEnv
 	fn.Funcs = append(fn.Funcs, f)
-	return &ConstExpr{Const: fn}, nil
+
+	return &fn, nil
 }
 
 func toSlice(seq Seq) ([]core.Any, error) {
