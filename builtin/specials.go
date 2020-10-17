@@ -12,7 +12,7 @@ import (
 // fails due to malformed syntax.
 var ErrSpecialForm = errors.New("invalid sepcial form")
 
-func parseDoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseDo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	var de DoExpr
 	err := ForEach(args, func(item core.Any) (bool, error) {
 		expr, err := a.Analyze(env, item)
@@ -28,7 +28,7 @@ func parseDoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	return de, nil
 }
 
-func parseIfExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseIf(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func parseIfExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	}, nil
 }
 
-func parseQuoteExpr(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
+func parseQuote(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 	if count, err := args.Count(); err != nil {
 		return nil, err
 	} else if count != 1 {
@@ -85,7 +85,7 @@ func parseQuoteExpr(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 	}, nil
 }
 
-func parseDefExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	e := Error{Cause: fmt.Errorf("%w: def", ErrSpecialForm)}
 
 	if args == nil {
@@ -131,7 +131,7 @@ func parseDefExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	}, nil
 }
 
-func parseGoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	v, err := args.First()
 	if err != nil {
 		return nil, err
@@ -149,4 +149,81 @@ func parseGoExpr(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	}
 
 	return GoExpr{Form: e}, nil
+}
+
+func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
+	fn := Fn{}
+
+	cnt, err := argSeq.Count()
+	if err != nil {
+		return nil, err
+	} else if cnt < 2 {
+		return nil, fmt.Errorf("%w: got %d, want at-least 2", ErrArity, cnt)
+	}
+
+	args, err := toSlice(argSeq)
+	if err != nil {
+		return nil, err
+	}
+
+	i := 0
+	if sym, ok := args[i].(Symbol); ok {
+		fn.Name = sym.String()
+		i++
+	}
+
+	if str, ok := args[i].(String); ok {
+		fn.Doc = string(str)
+		i++
+	}
+
+	fnArgs, ok := args[i].(*LinkedList)
+	if !ok {
+		return nil, fmt.Errorf(
+			"expecting a list of symbols, got '%s'", reflect.TypeOf(args[i]))
+	}
+	i++
+
+	f := Func{}
+	fnEnv := env.Child(fn.Name, nil)
+	err = ForEach(fnArgs, func(item core.Any) (bool, error) {
+		sym, ok := item.(Symbol)
+		if !ok {
+			return true, fmt.Errorf(
+				"expecting parameter to be a symbol, got '%s'",
+				reflect.TypeOf(item))
+		}
+		f.Params = append(f.Params, string(sym))
+
+		if err := fnEnv.Bind(string(sym), nil); err != nil {
+			return false, err
+		}
+
+		return false, nil
+	})
+
+	// wrap body in (do <expr>*) and analyze.
+	bodyExprs, err := Cons(Symbol("do"), NewList(args[i:]...))
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := a.Analyze(fnEnv, bodyExprs)
+	if err != nil {
+		return nil, err
+	}
+	f.Body = body
+
+	fn.Env = fnEnv
+	fn.Funcs = append(fn.Funcs, f)
+	return &ConstExpr{Const: fn}, nil
+}
+
+func toSlice(seq Seq) ([]core.Any, error) {
+	var sl []core.Any
+	err := ForEach(seq, func(item core.Any) (bool, error) {
+		sl = append(sl, item)
+		return false, nil
+	})
+	return sl, err
 }

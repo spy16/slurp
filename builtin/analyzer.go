@@ -11,11 +11,12 @@ import (
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		Specials: map[string]ParseSpecial{
-			"go":    parseGoExpr,
-			"do":    parseDoExpr,
-			"if":    parseIfExpr,
-			"def":   parseDefExpr,
-			"quote": parseQuoteExpr,
+			"go":    parseGo,
+			"do":    parseDo,
+			"if":    parseIf,
+			"def":   parseDef,
+			"quote": parseQuote,
+			"fn":    parseFn,
 		},
 	}
 }
@@ -39,11 +40,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 
 	switch f := form.(type) {
 	case Symbol:
-		v, err := env.Resolve(string(f))
-		if err != nil {
-			return nil, err
-		}
-		return ConstExpr{Const: v}, nil
+		return ResolveExpr{Symbol: f}, nil
 
 	case Seq:
 		cnt, err := f.Count()

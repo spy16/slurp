@@ -36,6 +36,9 @@ func (me *mapEnv) Parent() Env { return me.parent }
 // Child should return a new env with given frame name and vars
 // bound. Returned env should have this env as parent/outer.
 func (me *mapEnv) Child(name string, vars map[string]Any) Env {
+	if vars == nil {
+		vars = map[string]Any{}
+	}
 	return &mapEnv{
 		name:   name,
 		parent: me,

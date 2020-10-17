@@ -40,7 +40,7 @@ func Test_parseDo(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			runSpecialTest(t, tt, parseDoExpr)
+			runSpecialTest(t, tt, parseDo)
 		})
 	}
 }
@@ -74,7 +74,7 @@ func Test_parseDef(t *testing.T) {
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
 			tt.env = core.New(nil)
-			runSpecialTest(t, tt, parseDefExpr)
+			runSpecialTest(t, tt, parseDef)
 		})
 	}
 }
