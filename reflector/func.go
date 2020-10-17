@@ -5,17 +5,18 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp/core"
 )
 
 var (
-	envType = reflect.TypeOf((*slurp.Env)(nil)).Elem()
+	envType = reflect.TypeOf((*core.Env)(nil)).Elem()
 	errType = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 // Func converts the given Go func value to a slurp Invokable value. Panics
 // if the given value is not of Func kind.
-func Func(name string, v interface{}) slurp.Invokable {
+func Func(name string, v interface{}) builtin.Invokable {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 	if rt.Kind() != reflect.Func {
@@ -27,7 +28,6 @@ func Func(name string, v interface{}) slurp.Invokable {
 		minArgs = minArgs - 1
 	}
 
-	passScope := (minArgs > 0) && (rt.In(0) == envType)
 	lastOutIdx := rt.NumOut() - 1
 	returnsErr := lastOutIdx >= 0 && rt.Out(lastOutIdx) == errType
 	if returnsErr {
@@ -39,7 +39,6 @@ func Func(name string, v interface{}) slurp.Invokable {
 		rt:         rt,
 		name:       name,
 		minArgs:    minArgs,
-		passScope:  passScope,
 		returnsErr: returnsErr,
 		lastOutIdx: lastOutIdx,
 	}
@@ -49,35 +48,18 @@ type funcWrapper struct {
 	rv         reflect.Value
 	rt         reflect.Type
 	name       string
-	passScope  bool
 	minArgs    int
 	returnsErr bool
 	lastOutIdx int
 }
 
-func (fw *funcWrapper) Invoke(env *slurp.Env, args ...slurp.Any) (slurp.Any, error) {
+func (fw *funcWrapper) Invoke(args ...core.Any) (core.Any, error) {
+	// allocate argument slice.
 	argCount := len(args)
-	if fw.passScope {
-		// we need to pass 'env' also to the underlying function.
-		// so apart from explicitly passed arguments, one extra
-		// is needed.
-		argCount++
-	}
-
-	// allocate argument slice, including the space for 'env' argument
-	// if the function needs it.
 	argVals := make([]reflect.Value, argCount, argCount)
-	if fw.passScope {
-		argVals[0] = reflect.ValueOf(env)
-	}
 
 	// populate reflect.Value version of each argument.
 	for i, arg := range args {
-		if fw.passScope {
-			// 0th index is reserved for passing env. so offset index
-			// by 1.
-			i++
-		}
 		argVals[i] = reflect.ValueOf(arg)
 	}
 
@@ -170,9 +152,9 @@ func (fw *funcWrapper) checkArgCount(count int) error {
 	return nil
 }
 
-func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (slurp.Any, error) {
+func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 	if fw.rt.NumOut() == 0 {
-		return slurp.Nil{}, nil
+		return builtin.Nil{}, nil
 	}
 
 	if fw.returnsErr {
@@ -182,12 +164,12 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (slurp.Any, error) {
 		}
 
 		if fw.rt.NumOut() == 1 {
-			return slurp.Nil{}, nil
+			return builtin.Nil{}, nil
 		}
 	}
 
 	retValCount := len(vals[0 : fw.lastOutIdx+1])
-	wrapped := make([]slurp.Any, retValCount, retValCount)
+	wrapped := make([]core.Any, retValCount, retValCount)
 	for i := 0; i < retValCount; i++ {
 		wrapped[i] = vals[i].Interface()
 	}
@@ -196,7 +178,7 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (slurp.Any, error) {
 		return wrapped[0], nil
 	}
 
-	return slurp.NewList(wrapped...), nil
+	return builtin.NewList(wrapped...), nil
 }
 
 func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Value, error) {
@@ -221,7 +203,7 @@ func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Valu
 	return converted, nil
 }
 
-func reflectValues(args []slurp.Any) []reflect.Value {
+func reflectValues(args []core.Any) []reflect.Value {
 	var rvs []reflect.Value
 	for _, arg := range args {
 		rvs = append(rvs, reflect.ValueOf(arg))
@@ -229,8 +211,8 @@ func reflectValues(args []slurp.Any) []reflect.Value {
 	return rvs
 }
 
-func slurpValues(rvs []reflect.Value) []slurp.Any {
-	var vals []slurp.Any
+func slurpValues(rvs []reflect.Value) []core.Any {
+	var vals []core.Any
 	for _, arg := range rvs {
 		vals = append(vals, arg.Interface())
 	}

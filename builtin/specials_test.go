@@ -1,9 +1,11 @@
-package slurp
+package builtin
 
 import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/spy16/slurp/core"
 )
 
 func Test_parseDo(t *testing.T) {
@@ -12,16 +14,16 @@ func Test_parseDo(t *testing.T) {
 	table := []specialTest{
 		{
 			title: "NilArgs",
-			env:   New(),
+			env:   core.New(nil),
 			args:  nil,
 			want:  DoExpr{},
 		},
 		{
 			title: "SomeArgs",
-			env:   New(),
+			env:   core.New(nil),
 			args:  NewList(1, 2),
 			want: DoExpr{
-				Exprs: []Expr{
+				Exprs: []core.Expr{
 					ConstExpr{Const: 1},
 					ConstExpr{Const: 2},
 				},
@@ -29,7 +31,7 @@ func Test_parseDo(t *testing.T) {
 		},
 		{
 			title:   "AnalyzeFail",
-			env:     New(),
+			env:     core.New(nil),
 			args:    NewList(1, NewList(Symbol("def"))),
 			want:    nil,
 			wantErr: ErrSpecialForm,
@@ -45,8 +47,6 @@ func Test_parseDo(t *testing.T) {
 
 func Test_parseDef(t *testing.T) {
 	t.Parallel()
-
-	e := New()
 
 	table := []specialTest{
 		{
@@ -64,7 +64,6 @@ func Test_parseDef(t *testing.T) {
 			title: "Valid",
 			args:  NewList(Symbol("foo"), 100),
 			want: &DefExpr{
-				Env:   e,
 				Name:  "foo",
 				Value: ConstExpr{Const: 100},
 			},
@@ -74,7 +73,7 @@ func Test_parseDef(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = e
+			tt.env = core.New(nil)
 			runSpecialTest(t, tt, parseDefExpr)
 		})
 	}
@@ -82,14 +81,15 @@ func Test_parseDef(t *testing.T) {
 
 type specialTest struct {
 	title   string
-	env     *Env
+	env     core.Env
 	args    Seq
-	want    Expr
+	want    core.Expr
 	wantErr error
 }
 
 func runSpecialTest(t *testing.T, tt specialTest, parse ParseSpecial) {
-	got, err := parse(tt.env, tt.args)
+	a := NewAnalyzer()
+	got, err := parse(a, tt.env, tt.args)
 	if tt.wantErr != nil {
 		assert(t, errors.Is(err, tt.wantErr),
 			"wantErr=%#v\ngotErr=%#v", tt.wantErr, err)

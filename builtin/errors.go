@@ -1,4 +1,4 @@
-package slurp
+package builtin
 
 import (
 	"errors"
@@ -8,10 +8,6 @@ import (
 var (
 	// ErrNotFound is returned when a binding not found.
 	ErrNotFound = errors.New("not found")
-
-	// ErrInvalidBindName is returned by DefExpr when the bind name is
-	// invalid.
-	ErrInvalidBindName = errors.New("invalid name for def")
 
 	// ErrNotInvokable is returned by InvokeExpr when the target is not
 	// invokable.

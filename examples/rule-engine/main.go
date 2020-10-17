@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp/core"
 	"github.com/spy16/slurp/reader"
 	"github.com/spy16/slurp/reflector"
 )
@@ -33,7 +35,7 @@ func main() {
 func runDiscountingRule(rule string, user string) (bool, error) {
 	// Define and expose your rules which ideally should have no
 	// side effects.
-	globals := map[string]slurp.Any{
+	globals := map[string]core.Any{
 		"and":                 reflector.Func("and", and),
 		"or":                  reflector.Func("or", or),
 		"regular-user?":       reflector.Func("isRegularUser", isRegularUser),
@@ -47,9 +49,9 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 		return false, err
 	}
 
-	env := slurp.New(slurp.WithGlobals(globals, nil))
+	env := slurp.New(globals)
 	shouldDiscount, err := env.Eval(ruleForm)
-	return slurp.IsTruthy(shouldDiscount), err
+	return builtin.IsTruthy(shouldDiscount), err
 }
 
 func isNotBlacklisted(user string) bool {

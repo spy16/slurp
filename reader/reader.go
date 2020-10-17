@@ -17,7 +17,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp/core"
 )
 
 const dispatchTrigger = '#'
@@ -92,8 +93,8 @@ type Reader struct {
 
 // All consumes characters from stream until EOF and returns a list of all the forms
 // parsed. Any no-op forms (e.g., comment) will not be included in the result.
-func (rd *Reader) All() ([]slurp.Any, error) {
-	var forms []slurp.Any
+func (rd *Reader) All() ([]core.Any, error) {
+	var forms []core.Any
 
 	for {
 		form, err := rd.One()
@@ -113,7 +114,7 @@ func (rd *Reader) All() ([]slurp.Any, error) {
 // returns the form while ignoring the no-op forms like comments. Except EOF, all other
 // errors will be wrapped with reader Error type along with the positional information
 // obtained using Position().
-func (rd *Reader) One() (slurp.Any, error) {
+func (rd *Reader) One() (core.Any, error) {
 	for {
 		form, err := rd.readOne()
 		if err != nil {
@@ -271,7 +272,7 @@ func (rd *Reader) Token(init rune) (string, error) {
 
 // Container reads multiple forms until 'end' rune is reached. Should be used to read
 // collection types like List etc. formType is only used to annotate errors.
-func (rd Reader) Container(end rune, formType string, f func(slurp.Any) error) error {
+func (rd Reader) Container(end rune, formType string, f func(core.Any) error) error {
 	for {
 		if err := rd.SkipSpaces(); err != nil {
 			if err == io.EOF {
@@ -311,7 +312,7 @@ func (rd Reader) Container(end rune, formType string, f func(slurp.Any) error) e
 }
 
 // readOne is same as One() but always returns un-annotated errors.
-func (rd *Reader) readOne() (slurp.Any, error) {
+func (rd *Reader) readOne() (core.Any, error) {
 	if err := rd.SkipSpaces(); err != nil {
 		return nil, err
 	}
@@ -352,7 +353,7 @@ func (rd *Reader) readOne() (slurp.Any, error) {
 	return rd.symReader(rd, r)
 }
 
-func (rd *Reader) execDispatch() (slurp.Any, error) {
+func (rd *Reader) execDispatch() (core.Any, error) {
 	r2, err := rd.NextRune()
 	if err != nil {
 		// ignore the error and let readOne handle it.
@@ -396,7 +397,7 @@ func (rd *Reader) annotateErr(err error, beginPos Position, form string) error {
 	return readErr
 }
 
-func readUnicodeChar(token string, base int) (slurp.Char, error) {
+func readUnicodeChar(token string, base int) (builtin.Char, error) {
 	num, err := strconv.ParseInt(token, base, 64)
 	if err != nil {
 		return -1, fmt.Errorf("invalid unicode character: '\\%s'", token)
@@ -406,10 +407,10 @@ func readUnicodeChar(token string, base int) (slurp.Char, error) {
 		return -1, fmt.Errorf("invalid unicode character: '\\%s'", token)
 	}
 
-	return slurp.Char(num), nil
+	return builtin.Char(num), nil
 }
 
-func parseRadix(numStr string) (slurp.Int64, error) {
+func parseRadix(numStr string) (builtin.Int64, error) {
 	parts := strings.Split(numStr, "r")
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("%w (radix notation): '%s'", ErrNumberFormat, numStr)
@@ -431,10 +432,10 @@ func parseRadix(numStr string) (slurp.Int64, error) {
 		return 0, fmt.Errorf("%w (radix notation): '%s'", ErrNumberFormat, numStr)
 	}
 
-	return slurp.Int64(v), nil
+	return builtin.Int64(v), nil
 }
 
-func parseScientific(numStr string) (slurp.Float64, error) {
+func parseScientific(numStr string) (builtin.Float64, error) {
 	parts := strings.Split(numStr, "e")
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("%w (scientific notation): '%s'", ErrNumberFormat, numStr)
@@ -450,7 +451,7 @@ func parseScientific(numStr string) (slurp.Float64, error) {
 		return 0, fmt.Errorf("%w (scientific notation): '%s'", ErrNumberFormat, numStr)
 	}
 
-	return slurp.Float64(base * math.Pow(10, float64(pow))), nil
+	return builtin.Float64(base * math.Pow(10, float64(pow))), nil
 }
 
 func getEscape(r rune) (rune, error) {

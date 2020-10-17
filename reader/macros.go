@@ -7,17 +7,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp/core"
 )
 
 // Macro implementations can be plugged into the Reader to extend, override
 // or customize behavior of the reader.
-type Macro func(rd *Reader, init rune) (slurp.Any, error)
+type Macro func(rd *Reader, init rune) (core.Any, error)
 
 // // TODO(enhancement):  implement slurp.Set
 // // SetReader implements the reader macro for reading set from source.
 // func SetReader(setEnd rune, factory func() slurp.Set) Macro {
-// 	return func(rd *Reader, _ rune) (slurp.Any, error) {
+// 	return func(rd *Reader, _ rune) (core.Any, error) {
 // 		forms, err := rd.Container(setEnd, "Set")
 // 		if err != nil {
 // 			return nil, err
@@ -29,7 +30,7 @@ type Macro func(rd *Reader, init rune) (slurp.Any, error)
 // // TODO(enhancement): implement slurp.Vector
 // // VectorReader implements the reader macro for reading vector from source.
 // func VectorReader(vecEnd rune, factory func() slurp.Vector) Macro {
-// 	return func(rd *Reader, _ rune) (slurp.Any, error) {
+// 	return func(rd *Reader, _ rune) (core.Any, error) {
 // 		forms, err := rd.Container(vecEnd, "Vector")
 // 		if err != nil {
 // 			return nil, err
@@ -48,7 +49,7 @@ type Macro func(rd *Reader, init rune) (slurp.Any, error)
 // // MapReader returns a reader macro for reading map values from source. factory
 // // is used to construct the map and `Assoc` is called for every pair read.
 // func MapReader(mapEnd rune, factory func() slurp.Map) Macro {
-// 	return func(rd *Reader, _ rune) (slurp.Any, error) {
+// 	return func(rd *Reader, _ rune) (core.Any, error) {
 // 		forms, err := rd.Container(mapEnd, "Map")
 // 		if err != nil {
 // 			return nil, err
@@ -77,15 +78,15 @@ type Macro func(rd *Reader, init rune) (slurp.Any, error)
 // UnmatchedDelimiter implements a reader macro that can be used to capture
 // unmatched delimiters such as closing parenthesis etc.
 func UnmatchedDelimiter() Macro {
-	return func(rd *Reader, initRune rune) (slurp.Any, error) {
+	return func(rd *Reader, initRune rune) (core.Any, error) {
 		e := rd.annotateErr(ErrUnmatchedDelimiter, rd.Position(), "").(Error)
 		e.Rune = initRune
 		return nil, e
 	}
 }
 
-func symbolReader(symTable map[string]slurp.Any) Macro {
-	return func(rd *Reader, init rune) (slurp.Any, error) {
+func symbolReader(symTable map[string]core.Any) Macro {
+	return func(rd *Reader, init rune) (core.Any, error) {
 		beginPos := rd.Position()
 
 		s, err := rd.Token(init)
@@ -97,11 +98,11 @@ func symbolReader(symTable map[string]slurp.Any) Macro {
 			return predefVal, nil
 		}
 
-		return slurp.Symbol(s), nil
+		return builtin.Symbol(s), nil
 	}
 }
 
-func readNumber(rd *Reader, init rune) (slurp.Any, error) {
+func readNumber(rd *Reader, init rune) (core.Any, error) {
 	beginPos := rd.Position()
 
 	numStr, err := rd.Token(init)
@@ -129,7 +130,7 @@ func readNumber(rd *Reader, init rune) (slurp.Any, error) {
 		if err != nil {
 			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
 		}
-		return slurp.Float64(v), nil
+		return builtin.Float64(v), nil
 
 	case isRadix:
 		v, err := parseRadix(numStr)
@@ -144,11 +145,11 @@ func readNumber(rd *Reader, init rune) (slurp.Any, error) {
 			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
 		}
 
-		return slurp.Int64(v), nil
+		return builtin.Int64(v), nil
 	}
 }
 
-func readString(rd *Reader, init rune) (slurp.Any, error) {
+func readString(rd *Reader, init rune) (core.Any, error) {
 	beginPos := rd.Position()
 
 	var b strings.Builder
@@ -185,10 +186,10 @@ func readString(rd *Reader, init rune) (slurp.Any, error) {
 		b.WriteRune(r)
 	}
 
-	return slurp.String(b.String()), nil
+	return builtin.String(b.String()), nil
 }
 
-func readComment(rd *Reader, _ rune) (slurp.Any, error) {
+func readComment(rd *Reader, _ rune) (core.Any, error) {
 	for {
 		r, err := rd.NextRune()
 		if err != nil {
@@ -203,7 +204,7 @@ func readComment(rd *Reader, _ rune) (slurp.Any, error) {
 	return nil, ErrSkip
 }
 
-func readKeyword(rd *Reader, init rune) (slurp.Any, error) {
+func readKeyword(rd *Reader, init rune) (core.Any, error) {
 	beginPos := rd.Position()
 
 	token, err := rd.Token(-1)
@@ -211,10 +212,10 @@ func readKeyword(rd *Reader, init rune) (slurp.Any, error) {
 		return nil, rd.annotateErr(err, beginPos, token)
 	}
 
-	return slurp.Keyword(token), nil
+	return builtin.Keyword(token), nil
 }
 
-func readCharacter(rd *Reader, _ rune) (slurp.Any, error) {
+func readCharacter(rd *Reader, _ rune) (core.Any, error) {
 	beginPos := rd.Position()
 
 	r, err := rd.NextRune()
@@ -229,12 +230,12 @@ func readCharacter(rd *Reader, _ rune) (slurp.Any, error) {
 	runes := []rune(token)
 
 	if len(runes) == 1 {
-		return slurp.Char(runes[0]), nil
+		return builtin.Char(runes[0]), nil
 	}
 
 	v, found := charLiterals[token]
 	if found {
-		return slurp.Char(v), nil
+		return builtin.Char(v), nil
 	}
 
 	if token[0] == 'u' {
@@ -244,24 +245,24 @@ func readCharacter(rd *Reader, _ rune) (slurp.Any, error) {
 	return nil, fmt.Errorf("unsupported character: '\\%s'", token)
 }
 
-func readList(rd *Reader, _ rune) (slurp.Any, error) {
+func readList(rd *Reader, _ rune) (core.Any, error) {
 	const listEnd = ')'
 
 	beginPos := rd.Position()
 
-	forms := make([]slurp.Any, 0, 32) // pre-allocate to improve performance on small lists
-	if err := rd.Container(listEnd, "list", func(val slurp.Any) error {
+	forms := make([]core.Any, 0, 32) // pre-allocate to improve performance on small lists
+	if err := rd.Container(listEnd, "list", func(val core.Any) error {
 		forms = append(forms, val)
 		return nil
 	}); err != nil {
 		return nil, rd.annotateErr(err, beginPos, "")
 	}
 
-	return slurp.NewList(forms...), nil
+	return builtin.NewList(forms...), nil
 }
 
 func quoteFormReader(expandFunc string) Macro {
-	return func(rd *Reader, _ rune) (slurp.Any, error) {
+	return func(rd *Reader, _ rune) (core.Any, error) {
 		expr, err := rd.One()
 		if err != nil {
 			if err == io.EOF {
@@ -278,6 +279,6 @@ func quoteFormReader(expandFunc string) Macro {
 			return nil, err
 		}
 
-		return slurp.NewList(slurp.Symbol(expandFunc), expr), nil
+		return builtin.NewList(builtin.Symbol(expandFunc), expr), nil
 	}
 }

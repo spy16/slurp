@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/core"
 )
 
 var (
@@ -25,7 +25,7 @@ func Benchmark_funcWrapper_Invoke(b *testing.B) {
 
 	var res int
 	for i := 0; i < b.N; i++ {
-		ret, _ := fw.Invoke(nil, 1, 2)
+		ret, _ := fw.Invoke(1, 2)
 		res = ret.(int)
 	}
 	b.Logf("final result: %d", res)
@@ -34,14 +34,14 @@ func Benchmark_funcWrapper_Invoke(b *testing.B) {
 func Benchmark_funcWrapper_Invoke_Variadic(b *testing.B) {
 	fw := Func("foo", func(args ...int32) int32 { return args[0] + args[len(args)-1] })
 
-	args := make([]slurp.Any, 1000)
+	args := make([]core.Any, 1000)
 	for i := 0; i < len(args); i++ {
 		args[i] = 1
 	}
 
 	var res int32
 	for i := 0; i < b.N; i++ {
-		ret, _ := fw.Invoke(nil, args...)
+		ret, _ := fw.Invoke(args...)
 		res = ret.(int32)
 	}
 	b.Logf("final result: %d", res)
