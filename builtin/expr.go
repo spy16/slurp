@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -97,6 +98,28 @@ func (de DoExpr) Eval(env core.Env) (core.Any, error) {
 	return res, nil
 }
 
+type ResolveExpr struct {
+	Symbol Symbol
+}
+
+func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
+	var v core.Any
+	var err error
+	for env != nil {
+		v, err = env.Resolve(string(re.Symbol))
+		if errors.Is(err, core.ErrNotFound) {
+			// not found in the current frame. check parent.
+			env = env.Parent()
+			continue
+		}
+
+		// found the symbol or there was some unexpected error.
+		break
+
+	}
+	return v, err
+}
+
 // InvokeExpr performs invocation of target when evaluated.
 type InvokeExpr struct {
 	Name   string
@@ -137,7 +160,8 @@ type GoExpr struct {
 // Eval forks the given context to get a child context and launches goroutine
 // with the child context to evaluate the form.
 func (ge GoExpr) Eval(env core.Env) (core.Any, error) {
-	e := core.Root(env).Child("<go>", nil)
+	// TODO: verify this.
+	e := env.Child("<go>", nil)
 
 	go func() {
 		_, _ = ge.Form.Eval(e)

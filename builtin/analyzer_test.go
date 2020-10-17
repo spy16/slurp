@@ -45,7 +45,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 			title: "SymbolForm",
 			env:   e,
 			form:  builtin.Symbol("foo"),
-			want:  builtin.ConstExpr{Const: builtin.Keyword("hello")},
+			want:  builtin.ResolveExpr{Symbol: builtin.Symbol("foo")},
 		},
 		{
 			title: "Invokable",
@@ -53,7 +53,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 			form:  builtin.NewList(builtin.Symbol("hundred"), 1),
 			want: builtin.InvokeExpr{
 				Name:   "hundred",
-				Target: builtin.ConstExpr{Const: hundredFunc},
+				Target: builtin.ResolveExpr{Symbol: "hundred"},
 				Args:   []core.Expr{builtin.ConstExpr{Const: 1}},
 			},
 		},
