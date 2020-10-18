@@ -17,7 +17,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -397,7 +396,7 @@ func (rd *Reader) annotateErr(err error, beginPos Position, form string) error {
 	return readErr
 }
 
-func readUnicodeChar(token string, base int) (builtin.Char, error) {
+func readUnicodeChar(token string, base int) (core.Char, error) {
 	num, err := strconv.ParseInt(token, base, 64)
 	if err != nil {
 		return -1, fmt.Errorf("invalid unicode character: '\\%s'", token)
@@ -407,10 +406,10 @@ func readUnicodeChar(token string, base int) (builtin.Char, error) {
 		return -1, fmt.Errorf("invalid unicode character: '\\%s'", token)
 	}
 
-	return builtin.Char(num), nil
+	return core.Char(num), nil
 }
 
-func parseRadix(numStr string) (builtin.Int64, error) {
+func parseRadix(numStr string) (core.Int64, error) {
 	parts := strings.Split(numStr, "r")
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("%w (radix notation): '%s'", ErrNumberFormat, numStr)
@@ -432,10 +431,10 @@ func parseRadix(numStr string) (builtin.Int64, error) {
 		return 0, fmt.Errorf("%w (radix notation): '%s'", ErrNumberFormat, numStr)
 	}
 
-	return builtin.Int64(v), nil
+	return core.Int64(v), nil
 }
 
-func parseScientific(numStr string) (builtin.Float64, error) {
+func parseScientific(numStr string) (core.Float64, error) {
 	parts := strings.Split(numStr, "e")
 	if len(parts) != 2 {
 		return 0, fmt.Errorf("%w (scientific notation): '%s'", ErrNumberFormat, numStr)
@@ -451,7 +450,7 @@ func parseScientific(numStr string) (builtin.Float64, error) {
 		return 0, fmt.Errorf("%w (scientific notation): '%s'", ErrNumberFormat, numStr)
 	}
 
-	return builtin.Float64(base * math.Pow(10, float64(pow))), nil
+	return core.Float64(base * math.Pow(10, float64(pow))), nil
 }
 
 func getEscape(r rune) (rune, error) {

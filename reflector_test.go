@@ -1,4 +1,4 @@
-package reflector
+package slurp
 
 import (
 	"reflect"

@@ -1,4 +1,4 @@
-package builtin
+package slurp
 
 import (
 	"errors"
@@ -16,23 +16,23 @@ func Test_parseDo(t *testing.T) {
 			title: "NilArgs",
 			env:   core.New(nil),
 			args:  nil,
-			want:  DoExpr{},
+			want:  core.DoExpr{},
 		},
 		{
 			title: "SomeArgs",
 			env:   core.New(nil),
-			args:  NewList(1, 2),
-			want: DoExpr{
+			args:  core.NewList(1, 2),
+			want: core.DoExpr{
 				Exprs: []core.Expr{
-					ConstExpr{Const: 1},
-					ConstExpr{Const: 2},
+					core.ConstExpr{Const: 1},
+					core.ConstExpr{Const: 2},
 				},
 			},
 		},
 		{
 			title:   "AnalyzeFail",
 			env:     core.New(nil),
-			args:    NewList(1, NewList(Symbol("def"))),
+			args:    core.NewList(1, core.NewList(core.Symbol("def"))),
 			want:    nil,
 			wantErr: ErrParseSpecial,
 		},
@@ -56,16 +56,16 @@ func Test_parseDef(t *testing.T) {
 		},
 		{
 			title:   "SomeArgs",
-			args:    NewList(1, 2),
+			args:    core.NewList(1, 2),
 			want:    nil,
 			wantErr: ErrParseSpecial,
 		},
 		{
 			title: "Valid",
-			args:  NewList(Symbol("foo"), 100),
-			want: &DefExpr{
+			args:  core.NewList(core.Symbol("foo"), 100),
+			want: core.DefExpr{
 				Name:  "foo",
-				Value: ConstExpr{Const: 100},
+				Value: core.ConstExpr{Const: 100},
 			},
 			wantErr: nil,
 		},
@@ -82,7 +82,7 @@ func Test_parseDef(t *testing.T) {
 type specialTest struct {
 	title   string
 	env     core.Env
-	args    Seq
+	args    core.Seq
 	want    core.Expr
 	wantErr error
 }

@@ -1,12 +1,10 @@
-package builtin
+package core
 
 import (
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/spy16/slurp/core"
 )
 
 var _ Invokable = (*Fn)(nil)
@@ -17,7 +15,7 @@ var ErrArity = errors.New("wrong number of arguments")
 // Fn represents a mulit-arity function definition. Fn implements
 // Invokable.
 type Fn struct {
-	Env   core.Env
+	Env   Env
 	Name  string
 	Doc   string
 	Funcs []Func
@@ -26,7 +24,7 @@ type Fn struct {
 
 // Invoke selects and executes a func defined in the Fn and returns
 // the result of execution.
-func (fn Fn) Invoke(args ...core.Any) (core.Any, error) {
+func (fn Fn) Invoke(args ...Any) (Any, error) {
 	f, err := fn.selectFunc(args)
 	if err != nil {
 		return nil, err
@@ -43,7 +41,7 @@ func (fn Fn) Invoke(args ...core.Any) (core.Any, error) {
 
 // Compare returns true if 'v' is also a MultiFn and all methods are
 // equivalent.
-func (fn Fn) Compare(v core.Any) (bool, error) {
+func (fn Fn) Compare(v Any) (bool, error) {
 	other, ok := v.(Fn)
 	if !ok {
 		return false, nil
@@ -82,7 +80,7 @@ func (fn Fn) String() string {
 	return buf.String()
 }
 
-func (fn Fn) selectFunc(args []core.Any) (Func, error) {
+func (fn Fn) selectFunc(args []Any) (Func, error) {
 	for _, f := range fn.Funcs {
 		if f.matchArity(args) {
 			return f, nil
@@ -95,12 +93,12 @@ func (fn Fn) selectFunc(args []core.Any) (Func, error) {
 
 // Func represents a method of specific arity in Fn.
 type Func struct {
-	Body     core.Expr
+	Body     Expr
 	Params   []string
 	Variadic bool
 }
 
-func (f Func) matchArity(args []core.Any) bool {
+func (f Func) matchArity(args []Any) bool {
 	argc := len(args)
 	if f.Variadic {
 		return argc >= len(f.Params)-1

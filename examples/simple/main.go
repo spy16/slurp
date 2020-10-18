@@ -7,28 +7,26 @@ import (
 	"os"
 
 	"github.com/spy16/slurp"
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
-	"github.com/spy16/slurp/reflector"
 	"github.com/spy16/slurp/repl"
 )
 
 var globals = map[string]core.Any{
-	"nil":     builtin.Nil{},
-	"true":    builtin.Bool(true),
-	"false":   builtin.Bool(false),
-	"version": builtin.String("1.0"),
+	"nil":     core.Nil{},
+	"true":    core.Bool(true),
+	"false":   core.Bool(false),
+	"version": core.String("1.0"),
 
 	// custom Go functions.
-	"=": reflector.Func("=", builtin.Eq),
-	"+": reflector.Func("sum", func(a ...int) int {
+	"=": slurp.Func("=", core.Eq),
+	"+": slurp.Func("sum", func(a ...int) int {
 		sum := 0
 		for _, item := range a {
 			sum += item
 		}
 		return sum
 	}),
-	">": reflector.Func(">", func(a, b builtin.Int64) bool {
+	">": slurp.Func(">", func(a, b core.Int64) bool {
 		return a > b
 	}),
 }

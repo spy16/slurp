@@ -1,45 +1,43 @@
-package builtin
+package core
 
 import (
 	"errors"
 	"fmt"
 	"reflect"
-
-	"github.com/spy16/slurp/core"
 )
 
 var (
-	_ core.Expr = (*DoExpr)(nil)
-	_ core.Expr = (*IfExpr)(nil)
-	_ core.Expr = (*DefExpr)(nil)
-	_ core.Expr = (*QuoteExpr)(nil)
-	_ core.Expr = (*ConstExpr)(nil)
-	_ core.Expr = (*InvokeExpr)(nil)
-	_ core.Expr = (*ResolveExpr)(nil)
+	_ Expr = (*DoExpr)(nil)
+	_ Expr = (*IfExpr)(nil)
+	_ Expr = (*DefExpr)(nil)
+	_ Expr = (*QuoteExpr)(nil)
+	_ Expr = (*ConstExpr)(nil)
+	_ Expr = (*InvokeExpr)(nil)
+	_ Expr = (*ResolveExpr)(nil)
 )
 
 // ConstExpr returns the Const value wrapped inside when evaluated. It has
 // no side-effect on the VM.
-type ConstExpr struct{ Const core.Any }
+type ConstExpr struct{ Const Any }
 
 // Eval returns the constant value unmodified.
-func (ce ConstExpr) Eval(_ core.Env) (core.Any, error) { return ce.Const, nil }
+func (ce ConstExpr) Eval(_ Env) (Any, error) { return ce.Const, nil }
 
 // QuoteExpr expression represents a quoted form and
-type QuoteExpr struct{ Form core.Any }
+type QuoteExpr struct{ Form Any }
 
 // Eval returns the quoted form unmodified.
-func (qe QuoteExpr) Eval(_ core.Env) (core.Any, error) { return qe.Form, nil }
+func (qe QuoteExpr) Eval(_ Env) (Any, error) { return qe.Form, nil }
 
 // DefExpr represents the (def name value) binding form.
 type DefExpr struct {
 	Name  string
-	Value core.Expr
+	Value Expr
 }
 
 // Eval creates the binding with the name and value in Root env.
-func (de DefExpr) Eval(env core.Env) (core.Any, error) {
-	var val core.Any
+func (de DefExpr) Eval(env Env) (Any, error) {
+	var val Any
 	var err error
 	if de.Value != nil {
 		val, err = de.Value.Eval(env)
@@ -50,18 +48,18 @@ func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 		val = Nil{}
 	}
 
-	if err := core.Root(env).Bind(de.Name, val); err != nil {
+	if err := Root(env).Bind(de.Name, val); err != nil {
 		return nil, err
 	}
 	return Symbol(de.Name), nil
 }
 
 // IfExpr represents the if-then-else form.
-type IfExpr struct{ Test, Then, Else core.Expr }
+type IfExpr struct{ Test, Then, Else Expr }
 
 // Eval evaluates the then or else expr based on truthiness of the test
 // expr result.
-func (ife IfExpr) Eval(env core.Env) (core.Any, error) {
+func (ife IfExpr) Eval(env Env) (Any, error) {
 	target := ife.Else
 	if ife.Test != nil {
 		test, err := ife.Test.Eval(env)
@@ -80,12 +78,12 @@ func (ife IfExpr) Eval(env core.Env) (core.Any, error) {
 }
 
 // DoExpr represents the (do expr*) form.
-type DoExpr struct{ Exprs []core.Expr }
+type DoExpr struct{ Exprs []Expr }
 
 // Eval evaluates each expr in the do form in the order and returns the
 // result of the last eval.
-func (de DoExpr) Eval(env core.Env) (core.Any, error) {
-	var res core.Any
+func (de DoExpr) Eval(env Env) (Any, error) {
+	var res Any
 	var err error
 
 	for _, expr := range de.Exprs {
@@ -107,12 +105,12 @@ type ResolveExpr struct{ Symbol Symbol }
 // Eval resolves the symbol in the given environment or its parent env
 // and returns the result. Returns ErrNotFound if the symbol was not
 // found in the entire heirarchy.
-func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
-	var v core.Any
+func (re ResolveExpr) Eval(env Env) (Any, error) {
+	var v Any
 	var err error
 	for env != nil {
 		v, err = env.Resolve(string(re.Symbol))
-		if errors.Is(err, core.ErrNotFound) {
+		if errors.Is(err, ErrNotFound) {
 			// not found in the current frame. check parent.
 			env = env.Parent()
 			continue
@@ -126,11 +124,11 @@ func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
 }
 
 // GoExpr evaluates an expression in a separate goroutine.
-type GoExpr struct{ Form core.Expr }
+type GoExpr struct{ Form Expr }
 
 // Eval forks the given env to get a child env and launches goroutine
 // with the child env to evaluate the form.
-func (ge GoExpr) Eval(env core.Env) (core.Any, error) {
+func (ge GoExpr) Eval(env Env) (Any, error) {
 	// TODO: verify this.
 	e := env.Child("<go>", nil)
 
@@ -144,13 +142,13 @@ func (ge GoExpr) Eval(env core.Env) (core.Any, error) {
 // InvokeExpr performs invocation of target when evaluated.
 type InvokeExpr struct {
 	Name   string
-	Target core.Expr
-	Args   []core.Expr
+	Target Expr
+	Args   []Expr
 }
 
 // Eval evaluates the target expr and invokes the result if it is an
-// Invokable value. Returns error otherwise.
-func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
+// Invokable  Returns error otherwise.
+func (ie InvokeExpr) Eval(env Env) (Any, error) {
 	val, err := ie.Target.Eval(env)
 	if err != nil {
 		return nil, err
@@ -164,7 +162,7 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 		}
 	}
 
-	args := make([]core.Any, len(ie.Args))
+	args := make([]Any, len(ie.Args))
 	for i, ae := range ie.Args {
 		if args[i], err = ae.Eval(env); err != nil {
 			return nil, err
@@ -172,11 +170,4 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 	}
 
 	return fn.Invoke(args...)
-}
-
-// Invokable represents a value that can be invoked for result.
-type Invokable interface {
-	// Invoke is called if this value appears as the first argument of
-	// invocation form (i.e., list).
-	Invoke(args ...core.Any) (core.Any, error)
 }

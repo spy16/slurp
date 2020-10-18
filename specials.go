@@ -1,4 +1,4 @@
-package builtin
+package slurp
 
 import (
 	"errors"
@@ -13,9 +13,9 @@ import (
 // fails due to malformed syntax.
 var ErrParseSpecial = errors.New("invalid sepcial form")
 
-func parseDo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
-	var de DoExpr
-	err := ForEach(args, func(item core.Any) (bool, error) {
+func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+	var de core.DoExpr
+	err := core.ForEach(args, func(item core.Any) (bool, error) {
 		expr, err := a.Analyze(env, item)
 		if err != nil {
 			return true, err
@@ -29,12 +29,12 @@ func parseDo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	return de, nil
 }
 
-func parseIf(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseIf(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
 	} else if count != 2 && count != 3 {
-		return nil, Error{
+		return nil, core.Error{
 			Cause:   fmt.Errorf("%w: if", ErrParseSpecial),
 			Message: fmt.Sprintf("requires 2 or 3 arguments, got %d", count),
 		}
@@ -59,18 +59,18 @@ func parseIf(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 		}
 	}
 
-	return &IfExpr{
+	return core.IfExpr{
 		Test: exprs[0],
 		Then: exprs[1],
 		Else: exprs[2],
 	}, nil
 }
 
-func parseQuote(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
+func parseQuote(a core.Analyzer, _ core.Env, args core.Seq) (core.Expr, error) {
 	if count, err := args.Count(); err != nil {
 		return nil, err
 	} else if count != 1 {
-		return nil, Error{
+		return nil, core.Error{
 			Cause:   fmt.Errorf("%w: quote", ErrParseSpecial),
 			Message: fmt.Sprintf("requires exactly 1 argument, got %d", count),
 		}
@@ -81,11 +81,11 @@ func parseQuote(a core.Analyzer, _ core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return QuoteExpr{Form: first}, nil
+	return core.QuoteExpr{Form: first}, nil
 }
 
-func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
-	e := Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
+func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+	e := core.Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
 
 	if args == nil {
 		return nil, e.With("requires exactly 2 args, got 0")
@@ -103,7 +103,7 @@ func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	sym, ok := first.(Symbol)
+	sym, ok := first.(core.Symbol)
 	if !ok {
 		return nil, e.With(fmt.Sprintf(
 			"first arg must be symbol, not '%s'", reflect.TypeOf(first)))
@@ -124,13 +124,13 @@ func parseDef(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return &DefExpr{
+	return core.DefExpr{
 		Name:  string(sym),
 		Value: res,
 	}, nil
 }
 
-func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
+func parseGo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 	}
 
 	if v == nil {
-		return nil, Error{
+		return nil, core.Error{
 			Cause:   fmt.Errorf("%w: go", ErrParseSpecial),
 			Message: fmt.Sprintf("requires exactly 1 argument, got %d", count),
 		}
@@ -153,38 +153,38 @@ func parseGo(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return GoExpr{Form: e}, nil
+	return core.GoExpr{Form: e}, nil
 }
 
 // parseFn parses (fn name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseFn(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
+func parseFn(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
 	}
-	return &ConstExpr{Const: *fn}, nil
+	return core.ConstExpr{Const: *fn}, nil
 }
 
 // parseMacro parses (macro name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseMacro(a core.Analyzer, env core.Env, argSeq Seq) (core.Expr, error) {
+func parseMacro(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
 	}
 	fn.Macro = true
-	return &ConstExpr{Const: *fn}, nil
+	return core.ConstExpr{Const: *fn}, nil
 }
 
-func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
-	fn := Fn{}
+func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*core.Fn, error) {
+	fn := core.Fn{}
 
 	cnt, err := argSeq.Count()
 	if err != nil {
 		return nil, err
 	} else if cnt < 1 {
-		return nil, fmt.Errorf("%w: got %d, want at-least 1", ErrArity, cnt)
+		return nil, fmt.Errorf("%w: got %d, want at-least 1", core.ErrArity, cnt)
 	}
 
 	args, err := toSlice(argSeq)
@@ -193,29 +193,29 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 	}
 
 	i := 0
-	if sym, ok := args[i].(Symbol); ok {
+	if sym, ok := args[i].(core.Symbol); ok {
 		fn.Name = strings.TrimSpace(sym.String())
 		i++
 	}
 
-	if str, ok := args[i].(String); ok {
+	if str, ok := args[i].(core.String); ok {
 		fn.Doc = string(str)
 		i++
 	}
 
 	// TODO: add support for multi-arity parsing.
 
-	fnArgs, ok := args[i].(*LinkedList)
+	fnArgs, ok := args[i].(core.Seq)
 	if !ok {
 		return nil, fmt.Errorf(
 			"expecting a list of symbols, got '%s'", reflect.TypeOf(args[i]))
 	}
 	i++
 
-	f := Func{}
+	f := core.Func{}
 	fnEnv := env.Child(fn.Name, nil)
-	err = ForEach(fnArgs, func(item core.Any) (bool, error) {
-		sym, ok := item.(Symbol)
+	err = core.ForEach(fnArgs, func(item core.Any) (bool, error) {
+		sym, ok := item.(core.Symbol)
 		if !ok {
 			return true, fmt.Errorf(
 				"expecting parameter to be a symbol, got '%s'",
@@ -231,7 +231,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 	})
 
 	// wrap body in (do <expr>*) and analyze.
-	bodyExprs, err := Cons(Symbol("do"), NewList(args[i:]...))
+	bodyExprs, err := core.Cons(core.Symbol("do"), core.NewList(args[i:]...))
 	if err != nil {
 		return nil, err
 	}
@@ -248,9 +248,9 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq Seq) (*Fn, error) {
 	return &fn, nil
 }
 
-func toSlice(seq Seq) ([]core.Any, error) {
+func toSlice(seq core.Seq) ([]core.Any, error) {
 	var sl []core.Any
-	err := ForEach(seq, func(item core.Any) (bool, error) {
+	err := core.ForEach(seq, func(item core.Any) (bool, error) {
 		sl = append(sl, item)
 		return false, nil
 	})

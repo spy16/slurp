@@ -4,9 +4,7 @@ import (
 	"log"
 
 	"github.com/spy16/slurp"
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
-	"github.com/spy16/slurp/reflector"
 )
 
 func main() {
@@ -34,18 +32,18 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 	// Define and expose your rules which ideally should have no
 	// side effects.
 	globals := map[string]core.Any{
-		"and":                 reflector.Func("and", and),
-		"or":                  reflector.Func("or", or),
-		"regular-user?":       reflector.Func("isRegularUser", isRegularUser),
-		"minimum-cart-price?": reflector.Func("isMinCartPrice", isMinCartPrice),
-		"not-blacklisted?":    reflector.Func("isNotBlacklisted", isNotBlacklisted),
+		"and":                 slurp.Func("and", and),
+		"or":                  slurp.Func("or", or),
+		"regular-user?":       slurp.Func("isRegularUser", isRegularUser),
+		"minimum-cart-price?": slurp.Func("isMinCartPrice", isMinCartPrice),
+		"not-blacklisted?":    slurp.Func("isNotBlacklisted", isNotBlacklisted),
 		"current-user":        user,
 	}
 
 	ins := slurp.New()
 	_ = ins.Bind(globals)
 	shouldDiscount, err := ins.EvalStr(rule)
-	return builtin.IsTruthy(shouldDiscount), err
+	return core.IsTruthy(shouldDiscount), err
 }
 
 func isNotBlacklisted(user string) bool {
