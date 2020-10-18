@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -52,7 +51,7 @@ func TestReader_SetMacro(t *testing.T) {
 		rd := New(strings.NewReader("~hello"))
 		rd.SetMacro('~', false, nil) // remove unquote operator
 
-		want := builtin.Symbol("~hello")
+		want := core.Symbol("~hello")
 
 		got, err := rd.One()
 		if err != nil {
@@ -68,10 +67,10 @@ func TestReader_SetMacro(t *testing.T) {
 		rd := New(strings.NewReader("#$123"))
 		// `#$` returns string "USD"
 		rd.SetMacro('$', true, func(rd *Reader, init rune) (core.Any, error) {
-			return builtin.String("USD"), nil
+			return core.String("USD"), nil
 		}) // remove unquote operator
 
-		want := builtin.String("USD")
+		want := core.String("USD")
 
 		got, err := rd.One()
 		if err != nil {
@@ -102,10 +101,10 @@ func TestReader_SetMacro(t *testing.T) {
 				ru = append(ru, r)
 			}
 
-			return builtin.String(ru), nil
+			return core.String(ru), nil
 		}) // override unquote operator
 
-		want := builtin.String("hello")
+		want := core.String("hello")
 
 		got, err := rd.One()
 		if err != nil {
@@ -129,22 +128,22 @@ func TestReader_All(t *testing.T) {
 			name: "ValidLiteralSample",
 			src:  `123 "Hello World" 12.34 -0xF +010 true nil 0b1010 \a :hello`,
 			want: []core.Any{
-				builtin.Int64(123),
-				builtin.String("Hello World"),
-				builtin.Float64(12.34),
-				builtin.Int64(-15),
-				builtin.Int64(8),
-				builtin.Bool(true),
-				builtin.Nil{},
-				builtin.Int64(10),
-				builtin.Char('a'),
-				builtin.Keyword("hello"),
+				core.Int64(123),
+				core.String("Hello World"),
+				core.Float64(12.34),
+				core.Int64(-15),
+				core.Int64(8),
+				core.Bool(true),
+				core.Nil{},
+				core.Int64(10),
+				core.Char('a'),
+				core.Keyword("hello"),
 			},
 		},
 		{
 			name: "WithComment",
 			src:  `:valid-keyword ; comment should return errSkip`,
-			want: []core.Any{builtin.Keyword("valid-keyword")},
+			want: []core.Any{core.Keyword("valid-keyword")},
 		},
 		{
 			name:    "UnterminatedString",
@@ -154,7 +153,7 @@ func TestReader_All(t *testing.T) {
 		{
 			name: "CommentFollowedByForm",
 			src:  `; comment should return errSkip` + "\n" + `:valid-keyword`,
-			want: []core.Any{builtin.Keyword("valid-keyword")},
+			want: []core.Any{core.Keyword("valid-keyword")},
 		},
 		{
 			name:    "UnterminatedList",
@@ -212,11 +211,11 @@ func TestReader_One(t *testing.T) {
 		{
 			name: "UnQuote",
 			src:  "~(x 3)",
-			want: builtin.NewList(
-				builtin.Symbol("unquote"),
-				builtin.NewList(
-					builtin.Symbol("x"),
-					builtin.Int64(3),
+			want: core.NewList(
+				core.Symbol("unquote"),
+				core.NewList(
+					core.Symbol("x"),
+					core.Int64(3),
 				),
 			),
 		},
@@ -228,97 +227,97 @@ func TestReader_One_Number(t *testing.T) {
 		{
 			name: "NumberWithLeadingSpaces",
 			src:  "    +1234",
-			want: builtin.Int64(1234),
+			want: core.Int64(1234),
 		},
 		{
 			name: "PositiveInt",
 			src:  "+1245",
-			want: builtin.Int64(1245),
+			want: core.Int64(1245),
 		},
 		{
 			name: "NegativeInt",
 			src:  "-234",
-			want: builtin.Int64(-234),
+			want: core.Int64(-234),
 		},
 		{
 			name: "PositiveFloat",
 			src:  "+1.334",
-			want: builtin.Float64(1.334),
+			want: core.Float64(1.334),
 		},
 		{
 			name: "NegativeFloat",
 			src:  "-1.334",
-			want: builtin.Float64(-1.334),
+			want: core.Float64(-1.334),
 		},
 		{
 			name: "PositiveHex",
 			src:  "0x124",
-			want: builtin.Int64(0x124),
+			want: core.Int64(0x124),
 		},
 		{
 			name: "NegativeHex",
 			src:  "-0x124",
-			want: builtin.Int64(-0x124),
+			want: core.Int64(-0x124),
 		},
 		{
 			name: "PositiveOctal",
 			src:  "0123",
-			want: builtin.Int64(0123),
+			want: core.Int64(0123),
 		},
 		{
 			name: "NegativeOctal",
 			src:  "-0123",
-			want: builtin.Int64(-0123),
+			want: core.Int64(-0123),
 		},
 		{
 			name: "PositiveBinary",
 			src:  "0b10",
-			want: builtin.Int64(2),
+			want: core.Int64(2),
 		},
 		{
 			name: "NegativeBinary",
 			src:  "-0b10",
-			want: builtin.Int64(-2),
+			want: core.Int64(-2),
 		},
 		{
 			name: "PositiveBase2Radix",
 			src:  "2r10",
-			want: builtin.Int64(2),
+			want: core.Int64(2),
 		},
 		{
 			name: "NegativeBase2Radix",
 			src:  "-2r10",
-			want: builtin.Int64(-2),
+			want: core.Int64(-2),
 		},
 		{
 			name: "PositiveBase4Radix",
 			src:  "4r123",
-			want: builtin.Int64(27),
+			want: core.Int64(27),
 		},
 		{
 			name: "NegativeBase4Radix",
 			src:  "-4r123",
-			want: builtin.Int64(-27),
+			want: core.Int64(-27),
 		},
 		{
 			name: "ScientificSimple",
 			src:  "1e10",
-			want: builtin.Float64(1e10),
+			want: core.Float64(1e10),
 		},
 		{
 			name: "ScientificNegativeExponent",
 			src:  "1e-10",
-			want: builtin.Float64(1e-10),
+			want: core.Float64(1e-10),
 		},
 		{
 			name: "ScientificWithDecimal",
 			src:  "1.5e10",
-			want: builtin.Float64(1.5e+10),
+			want: core.Float64(1.5e+10),
 		},
 		{
 			name:    "FloatStartingWith0",
 			src:     "012.3",
-			want:    builtin.Float64(012.3),
+			want:    core.Float64(012.3),
 			wantErr: false,
 		},
 		{
@@ -384,22 +383,22 @@ func TestReader_One_String(t *testing.T) {
 		{
 			name: "SimpleString",
 			src:  `"hello"`,
-			want: builtin.String("hello"),
+			want: core.String("hello"),
 		},
 		{
 			name: "EscapeQuote",
 			src:  `"double quote is \""`,
-			want: builtin.String(`double quote is "`),
+			want: core.String(`double quote is "`),
 		},
 		{
 			name: "EscapeTab",
 			src:  `"hello\tworld"`,
-			want: builtin.String("hello\tworld"),
+			want: core.String("hello\tworld"),
 		},
 		{
 			name: "EscapeSlash",
 			src:  `"hello\\world"`,
-			want: builtin.String(`hello\world`),
+			want: core.String(`hello\world`),
 		},
 		{
 			name:    "UnexpectedEOF",
@@ -424,27 +423,27 @@ func TestReader_One_Keyword(t *testing.T) {
 		{
 			name: "SimpleASCII",
 			src:  `:test`,
-			want: builtin.Keyword("test"),
+			want: core.Keyword("test"),
 		},
 		{
 			name: "LeadingTrailingSpaces",
 			src:  "          :test          ",
-			want: builtin.Keyword("test"),
+			want: core.Keyword("test"),
 		},
 		{
 			name: "SimpleUnicode",
 			src:  `:∂`,
-			want: builtin.Keyword("∂"),
+			want: core.Keyword("∂"),
 		},
 		{
 			name: "WithSpecialChars",
 			src:  `:this-is-valid?`,
-			want: builtin.Keyword("this-is-valid?"),
+			want: core.Keyword("this-is-valid?"),
 		},
 		{
 			name: "FollowedByMacroChar",
 			src:  `:this-is-valid'hello`,
-			want: builtin.Keyword("this-is-valid"),
+			want: core.Keyword("this-is-valid"),
 		},
 	})
 }
@@ -454,32 +453,32 @@ func TestReader_One_Character(t *testing.T) {
 		{
 			name: "ASCIILetter",
 			src:  `\a`,
-			want: builtin.Char('a'),
+			want: core.Char('a'),
 		},
 		{
 			name: "ASCIIDigit",
 			src:  `\1`,
-			want: builtin.Char('1'),
+			want: core.Char('1'),
 		},
 		{
 			name: "Unicode",
 			src:  `\∂`,
-			want: builtin.Char('∂'),
+			want: core.Char('∂'),
 		},
 		{
 			name: "Newline",
 			src:  `\newline`,
-			want: builtin.Char('\n'),
+			want: core.Char('\n'),
 		},
 		{
 			name: "FormFeed",
 			src:  `\formfeed`,
-			want: builtin.Char('\f'),
+			want: core.Char('\f'),
 		},
 		{
 			name: "Unicode",
 			src:  `\u00AE`,
-			want: builtin.Char('®'),
+			want: core.Char('®'),
 		},
 		{
 			name:    "InvalidUnicode",
@@ -509,17 +508,17 @@ func TestReader_One_Symbol(t *testing.T) {
 		{
 			name: "SimpleASCII",
 			src:  `hello`,
-			want: builtin.Symbol("hello"),
+			want: core.Symbol("hello"),
 		},
 		{
 			name: "Unicode",
 			src:  `find-∂`,
-			want: builtin.Symbol("find-∂"),
+			want: core.Symbol("find-∂"),
 		},
 		{
 			name: "SingleChar",
 			src:  `+`,
-			want: builtin.Symbol("+"),
+			want: core.Symbol("+"),
 		},
 	})
 }
@@ -529,29 +528,29 @@ func TestReader_One_List(t *testing.T) {
 		{
 			name: "EmptyList",
 			src:  `()`,
-			want: builtin.NewList(),
+			want: core.NewList(),
 		},
 		{
 			name: "ListWithOneEntry",
 			src:  `(help)`,
-			want: builtin.NewList(builtin.Symbol("help")),
+			want: core.NewList(core.Symbol("help")),
 		},
 		{
 			name: "ListWithMultipleEntry",
 			src:  `(+ 0xF 3.1413)`,
-			want: builtin.NewList(
-				builtin.Symbol("+"),
-				builtin.Int64(15),
-				builtin.Float64(3.1413),
+			want: core.NewList(
+				core.Symbol("+"),
+				core.Int64(15),
+				core.Float64(3.1413),
 			),
 		},
 		{
 			name: "ListWithCommaSeparator",
 			src:  `(+,0xF,3.1413)`,
-			want: builtin.NewList(
-				builtin.Symbol("+"),
-				builtin.Int64(15),
-				builtin.Float64(3.1413),
+			want: core.NewList(
+				core.Symbol("+"),
+				core.Int64(15),
+				core.Float64(3.1413),
 			),
 		},
 		{
@@ -560,10 +559,10 @@ func TestReader_One_List(t *testing.T) {
                       0xF
                       3.1413
 					)`,
-			want: builtin.NewList(
-				builtin.Symbol("+"),
-				builtin.Int64(15),
-				builtin.Float64(3.1413),
+			want: core.NewList(
+				core.Symbol("+"),
+				core.Int64(15),
+				core.Float64(3.1413),
 			),
 		},
 		{
@@ -572,10 +571,10 @@ func TestReader_One_List(t *testing.T) {
                       0xF    ; hex representation of 15
                       3.1413 ; value of math constant pi
                   )`,
-			want: builtin.NewList(
-				builtin.Symbol("+"),
-				builtin.Int64(15),
-				builtin.Float64(3.1413),
+			want: core.NewList(
+				core.Symbol("+"),
+				core.Int64(15),
+				core.Float64(3.1413),
 			),
 		},
 		{

@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-var errUnknown = errors.New("failed")
-
 func TestEval(t *testing.T) {
 	t.Parallel()
 
@@ -87,19 +85,4 @@ func Test_mapEnv_Bind_Resolve(t *testing.T) {
 	v, err = env.Resolve("non-existent")
 	assert(t, errors.Is(err, ErrNotFound), "want ErrNotFound, got '%+v'", err)
 	assert(t, v == nil, "want=nil, got=%+v", v)
-}
-
-func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
-	if !cond {
-		t.Errorf(msg, args...)
-	}
-}
-
-type fakeAnalyzer struct {
-	Res Any
-	Err error
-}
-
-func (fa fakeAnalyzer) Analyze(env Env, form Any) (Expr, error) {
-	return constExpr{Const: fa.Res}, fa.Err
 }

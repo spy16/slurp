@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -98,7 +97,7 @@ func symbolReader(symTable map[string]core.Any) Macro {
 			return predefVal, nil
 		}
 
-		return builtin.Symbol(s), nil
+		return core.Symbol(s), nil
 	}
 }
 
@@ -130,7 +129,7 @@ func readNumber(rd *Reader, init rune) (core.Any, error) {
 		if err != nil {
 			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
 		}
-		return builtin.Float64(v), nil
+		return core.Float64(v), nil
 
 	case isRadix:
 		v, err := parseRadix(numStr)
@@ -145,7 +144,7 @@ func readNumber(rd *Reader, init rune) (core.Any, error) {
 			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
 		}
 
-		return builtin.Int64(v), nil
+		return core.Int64(v), nil
 	}
 }
 
@@ -186,7 +185,7 @@ func readString(rd *Reader, init rune) (core.Any, error) {
 		b.WriteRune(r)
 	}
 
-	return builtin.String(b.String()), nil
+	return core.String(b.String()), nil
 }
 
 func readComment(rd *Reader, _ rune) (core.Any, error) {
@@ -212,7 +211,7 @@ func readKeyword(rd *Reader, init rune) (core.Any, error) {
 		return nil, rd.annotateErr(err, beginPos, token)
 	}
 
-	return builtin.Keyword(token), nil
+	return core.Keyword(token), nil
 }
 
 func readCharacter(rd *Reader, _ rune) (core.Any, error) {
@@ -230,12 +229,12 @@ func readCharacter(rd *Reader, _ rune) (core.Any, error) {
 	runes := []rune(token)
 
 	if len(runes) == 1 {
-		return builtin.Char(runes[0]), nil
+		return core.Char(runes[0]), nil
 	}
 
 	v, found := charLiterals[token]
 	if found {
-		return builtin.Char(v), nil
+		return core.Char(v), nil
 	}
 
 	if token[0] == 'u' {
@@ -258,7 +257,7 @@ func readList(rd *Reader, _ rune) (core.Any, error) {
 		return nil, rd.annotateErr(err, beginPos, "")
 	}
 
-	return builtin.NewList(forms...), nil
+	return core.NewList(forms...), nil
 }
 
 func quoteFormReader(expandFunc string) Macro {
@@ -279,6 +278,6 @@ func quoteFormReader(expandFunc string) Macro {
 			return nil, err
 		}
 
-		return builtin.NewList(builtin.Symbol(expandFunc), expr), nil
+		return core.NewList(core.Symbol(expandFunc), expr), nil
 	}
 }

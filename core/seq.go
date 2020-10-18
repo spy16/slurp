@@ -1,48 +1,19 @@
-package builtin
+package core
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/spy16/slurp/core"
 )
 
-// Seq represents a sequence of values.
-type Seq interface {
-	// Count returns the number of items in the sequence.
-	Count() (int, error)
-
-	// First returns the first item in the sequence.
-	First() (core.Any, error)
-
-	// Next returns the tail of the sequence (i.e, sequence after
-	// excluding the head). Returns nil, nil if it has no tail.
-	Next() (Seq, error)
-
-	// Conj returns a new sequence with given items conjoined.
-	Conj(items ...core.Any) (Seq, error)
-}
-
-// NewList returns a new linked-list containing given values.
-func NewList(items ...core.Any) Seq {
-	if len(items) == 0 {
-		return Seq((*LinkedList)(nil))
-	}
-
-	var err error
-	lst := Seq(&LinkedList{})
-	for i := len(items) - 1; i >= 0; i-- {
-		if lst, err = Cons(items[i], lst); err != nil {
-			panic(err)
-		}
-	}
-
-	return lst
-}
+var (
+	_ Any              = (*LinkedList)(nil)
+	_ Seq              = (*LinkedList)(nil)
+	_ EqualityProvider = (*LinkedList)(nil)
+)
 
 // Cons returns a new seq with `v` added as the first and `seq` as the rest.
 // seq can be nil as well.
-func Cons(v core.Any, seq Seq) (Seq, error) {
+func Cons(v Any, seq Seq) (Seq, error) {
 	newSeq := &LinkedList{
 		first: v,
 		rest:  seq,
@@ -65,7 +36,7 @@ func Cons(v core.Any, seq Seq) (Seq, error) {
 func SeqString(seq Seq, begin, end, sep string) (string, error) {
 	var b strings.Builder
 	b.WriteString(begin)
-	err := ForEach(seq, func(item core.Any) (bool, error) {
+	err := ForEach(seq, func(item Any) (bool, error) {
 		if sxpr, ok := item.(SExpressable); ok {
 			s, err := sxpr.SExpr()
 			if err != nil {
@@ -90,8 +61,8 @@ func SeqString(seq Seq, begin, end, sep string) (string, error) {
 
 // ForEach reads from the sequence and calls the given function for each item.
 // Function can return true to stop the iteration.
-func ForEach(seq Seq, call func(item core.Any) (bool, error)) (err error) {
-	var v core.Any
+func ForEach(seq Seq, call func(item Any) (bool, error)) (err error) {
+	var v Any
 	var done bool
 	for seq != nil {
 		if v, err = seq.First(); err != nil || v == nil {
@@ -110,10 +81,27 @@ func ForEach(seq Seq, call func(item core.Any) (bool, error)) (err error) {
 	return
 }
 
+// NewList returns a new linked-list containing given values.
+func NewList(items ...Any) Seq {
+	if len(items) == 0 {
+		return Seq((*LinkedList)(nil))
+	}
+
+	var err error
+	lst := Seq(&LinkedList{})
+	for i := len(items) - 1; i >= 0; i-- {
+		if lst, err = Cons(items[i], lst); err != nil {
+			panic(err)
+		}
+	}
+
+	return lst
+}
+
 // LinkedList implements an immutable Seq using linked-list data structure.
 type LinkedList struct {
 	count int
-	first core.Any
+	first Any
 	rest  Seq
 }
 
@@ -128,14 +116,14 @@ func (ll *LinkedList) SExpr() (string, error) {
 
 // Equals returns true if the other value is a LinkedList and contains the same
 // values.
-func (ll *LinkedList) Equals(other core.Any) (eq bool, err error) {
+func (ll *LinkedList) Equals(other Any) (eq bool, err error) {
 	o, ok := other.(*LinkedList)
 	if !ok || o.count != ll.count {
 		return
 	}
 
 	var s Seq = ll
-	err = ForEach(o, func(any core.Any) (bool, error) {
+	err = ForEach(o, func(any Any) (bool, error) {
 		v, _ := s.First()
 
 		veq, ok := v.(EqualityProvider)
@@ -155,7 +143,7 @@ func (ll *LinkedList) Equals(other core.Any) (eq bool, err error) {
 }
 
 // Conj returns a new list with all the items added at the head of the list.
-func (ll *LinkedList) Conj(items ...core.Any) (res Seq, err error) {
+func (ll *LinkedList) Conj(items ...Any) (res Seq, err error) {
 	if ll == nil {
 		res = &LinkedList{}
 	} else {
@@ -172,7 +160,7 @@ func (ll *LinkedList) Conj(items ...core.Any) (res Seq, err error) {
 }
 
 // First returns the head or first item of the list.
-func (ll *LinkedList) First() (core.Any, error) {
+func (ll *LinkedList) First() (Any, error) {
 	if ll == nil {
 		return nil, nil
 	}

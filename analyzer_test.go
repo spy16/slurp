@@ -1,26 +1,20 @@
-package builtin_test
+package slurp_test
 
 import (
 	"errors"
 	"reflect"
 	"testing"
 
-	"github.com/spy16/slurp/builtin"
+	"github.com/spy16/slurp"
 	"github.com/spy16/slurp/core"
 )
-
-type fakeFn struct{}
-
-func (fakeFn) Invoke(_ ...core.Any) (core.Any, error) {
-	return 100, nil
-}
 
 func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	t.Parallel()
 
 	hundredFunc := fakeFn{}
 	e := core.New(map[string]core.Any{
-		"foo":     builtin.Keyword("hello"),
+		"foo":     core.Keyword("hello"),
 		"hundred": hundredFunc,
 	})
 
@@ -33,38 +27,38 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	}{
 		{
 			title: "SpecialForm",
-			form:  builtin.NewList(builtin.Symbol("foo")),
-			want:  builtin.ConstExpr{Const: "foo"},
+			form:  core.NewList(core.Symbol("foo")),
+			want:  core.ConstExpr{Const: "foo"},
 		},
 		{
 			title: "EmptySeq",
-			form:  builtin.NewList(),
-			want:  builtin.ConstExpr{Const: builtin.NewList()},
+			form:  core.NewList(),
+			want:  core.ConstExpr{Const: core.NewList()},
 		},
 		{
 			title: "SymbolForm",
 			env:   e,
-			form:  builtin.Symbol("foo"),
-			want:  builtin.ResolveExpr{Symbol: builtin.Symbol("foo")},
+			form:  core.Symbol("foo"),
+			want:  core.ResolveExpr{Symbol: core.Symbol("foo")},
 		},
 		{
 			title: "Invokable",
 			env:   e,
-			form:  builtin.NewList(builtin.Symbol("hundred"), 1),
-			want: builtin.InvokeExpr{
+			form:  core.NewList(core.Symbol("hundred"), 1),
+			want: core.InvokeExpr{
 				Name:   "hundred",
-				Target: builtin.ResolveExpr{Symbol: "hundred"},
-				Args:   []core.Expr{builtin.ConstExpr{Const: 1}},
+				Target: core.ResolveExpr{Symbol: "hundred"},
+				Args:   []core.Expr{core.ConstExpr{Const: 1}},
 			},
 		},
 	}
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			ba := &builtin.Analyzer{
-				Specials: map[string]builtin.ParseSpecial{
-					"foo": func(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
-						return builtin.ConstExpr{Const: "foo"}, nil
+			ba := &slurp.BuiltinAnalyzer{
+				Specials: map[string]slurp.ParseSpecial{
+					"foo": func(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+						return core.ConstExpr{Const: "foo"}, nil
 					},
 				},
 			}
@@ -90,4 +84,10 @@ func assert(t testInstance, cond bool, msg string, args ...interface{}) {
 
 type testInstance interface {
 	Errorf(msg string, args ...interface{})
+}
+
+type fakeFn struct{}
+
+func (fakeFn) Invoke(_ ...core.Any) (core.Any, error) {
+	return 100, nil
 }

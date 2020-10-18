@@ -8,11 +8,17 @@ import (
 
 const rootEnv = "<main>"
 
-var (
-	_ Env      = (*mapEnv)(nil)
-	_ Expr     = (*constExpr)(nil)
-	_ Analyzer = (*constAnalyzer)(nil)
-)
+// New returns a root Env that can be used to execute forms.
+func New(globals map[string]Any) Env {
+	if globals == nil {
+		globals = map[string]Any{}
+	}
+	return &mapEnv{
+		parent: nil,
+		name:   rootEnv,
+		vars:   globals,
+	}
+}
 
 // Eval performs syntax analysis of the given form to produce an Expr
 // and evalautes the Expr against the given Env.
@@ -37,18 +43,6 @@ func Root(env Env) Env {
 	return env
 }
 
-// New returns a root Env that can be used to execute forms.
-func New(vars map[string]Any) Env {
-	if vars == nil {
-		vars = map[string]Any{}
-	}
-	return &mapEnv{
-		parent: nil,
-		name:   rootEnv,
-		vars:   vars,
-	}
-}
-
 // mapEnv implements Env using a Go native map and RWMutex.
 type mapEnv struct {
 	parent Env
@@ -58,8 +52,7 @@ type mapEnv struct {
 }
 
 func (me *mapEnv) Name() string { return me.name }
-
-func (me *mapEnv) Parent() Env { return me.parent }
+func (me *mapEnv) Parent() Env  { return me.parent }
 
 func (me *mapEnv) Child(name string, vars map[string]Any) Env {
 	if vars == nil {
@@ -106,10 +99,10 @@ func (me *mapEnv) Resolve(name string) (Any, error) {
 
 type constAnalyzer struct{}
 
-func (constAnalyzer) Analyze(env Env, form Any) (Expr, error) {
+func (constAnalyzer) Analyze(_ Env, form Any) (Expr, error) {
 	return constExpr{Const: form}, nil
 }
 
 type constExpr struct{ Const Any }
 
-func (ce constExpr) Eval(_ Env) (Any, error) { return ce.Const, nil }
+func (ce constExpr) Eval(env Env) (Any, error) { return ce.Const, nil }

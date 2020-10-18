@@ -1,11 +1,10 @@
-package reflector
+package slurp
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -14,9 +13,48 @@ var (
 	errType = reflect.TypeOf((*error)(nil)).Elem()
 )
 
+// Value converts the given arbitrary Go value into a slurp compatible value
+// type with well defined behaviours. If no known equivalent type is found,
+// then the value is returned as is.
+func Value(v interface{}) core.Any {
+	if v == nil {
+		return core.Nil{}
+	}
+
+	if expr, ok := v.(core.Expr); ok {
+		return expr
+	}
+
+	rv := reflect.ValueOf(v)
+
+	switch rv.Kind() {
+	case reflect.Func:
+		return Func(fmt.Sprintf("%v", v), rv)
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return core.Int64(rv.Int())
+
+	case reflect.Float32, reflect.Float64:
+		return core.Float64(rv.Float())
+
+	case reflect.String:
+		return core.String(rv.String())
+
+	case reflect.Uint8:
+		return core.Char(rv.Uint())
+
+	case reflect.Bool:
+		return core.Bool(rv.Bool())
+
+	default:
+		// TODO: handle array & slice as list/vector.
+		return v
+	}
+}
+
 // Func converts the given Go func value to a slurp Invokable value. Panics
 // if the given value is not of Func kind.
-func Func(name string, v interface{}) builtin.Invokable {
+func Func(name string, v interface{}) core.Invokable {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 	if rt.Kind() != reflect.Func {
@@ -154,7 +192,7 @@ func (fw *funcWrapper) checkArgCount(count int) error {
 
 func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 	if fw.rt.NumOut() == 0 {
-		return builtin.Nil{}, nil
+		return core.Nil{}, nil
 	}
 
 	if fw.returnsErr {
@@ -164,7 +202,7 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 		}
 
 		if fw.rt.NumOut() == 1 {
-			return builtin.Nil{}, nil
+			return core.Nil{}, nil
 		}
 	}
 
@@ -178,7 +216,7 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 		return wrapped[0], nil
 	}
 
-	return builtin.NewList(wrapped...), nil
+	return core.NewList(wrapped...), nil
 }
 
 func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Value, error) {
