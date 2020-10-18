@@ -11,25 +11,9 @@ import (
 // was not expanded.
 var ErrNoExpand = errors.New("no macro expansion")
 
-// NewAnalyzer returns an instance of Analyzer with builtin specia form
-// parsers.
-func NewAnalyzer() *BuiltinAnalyzer {
-	return &BuiltinAnalyzer{
-		Specials: map[string]ParseSpecial{
-			"go":    parseGo,
-			"do":    parseDo,
-			"if":    parseIf,
-			"fn":    parseFn,
-			"def":   parseDef,
-			"macro": parseMacro,
-			"quote": parseQuote,
-		},
-	}
-}
-
-// BuiltinAnalyzer parses builtin value forms and returns Expr that can
+// Analyzer parses builtin value forms and returns Expr that can
 // be evaluated against Env.
-type BuiltinAnalyzer struct {
+type Analyzer struct {
 	Specials map[string]ParseSpecial
 }
 
@@ -39,7 +23,7 @@ type ParseSpecial func(analyzer core.Analyzer, env core.Env, args core.Seq) (cor
 
 // Analyze performs syntactic analysis of given form and returns an Expr
 // that can be evaluated for result against an Env.
-func (ba BuiltinAnalyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
+func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	if core.IsNil(form) {
 		return core.ConstExpr{Const: core.Nil{}}, nil
 	}
@@ -70,7 +54,7 @@ func (ba BuiltinAnalyzer) Analyze(env core.Env, form core.Any) (core.Expr, error
 	return core.ConstExpr{Const: exp}, nil
 }
 
-func (ba BuiltinAnalyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
+func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 	//	Get the call target.  This is the first item in the sequence.
 	first, err := seq.First()
 	if err != nil {

@@ -55,7 +55,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			ba := &slurp.BuiltinAnalyzer{
+			ba := &slurp.Analyzer{
 				Specials: map[string]slurp.ParseSpecial{
 					"foo": func(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 						return core.ConstExpr{Const: "foo"}, nil
