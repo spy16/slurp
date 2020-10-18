@@ -9,12 +9,13 @@ import (
 )
 
 var (
-	_ core.Expr = (*ConstExpr)(nil)
+	_ core.Expr = (*DoExpr)(nil)
+	_ core.Expr = (*IfExpr)(nil)
 	_ core.Expr = (*DefExpr)(nil)
 	_ core.Expr = (*QuoteExpr)(nil)
+	_ core.Expr = (*ConstExpr)(nil)
 	_ core.Expr = (*InvokeExpr)(nil)
-	_ core.Expr = (*IfExpr)(nil)
-	_ core.Expr = (*DoExpr)(nil)
+	_ core.Expr = (*ResolveExpr)(nil)
 )
 
 // ConstExpr returns the Const value wrapped inside when evaluated. It has
@@ -24,35 +25,19 @@ type ConstExpr struct{ Const core.Any }
 // Eval returns the constant value unmodified.
 func (ce ConstExpr) Eval(_ core.Env) (core.Any, error) { return ce.Const, nil }
 
-type listExpr struct {
-	Items []core.Expr
-}
-
-func (le listExpr) Eval(env core.Env) (core.Any, error) {
-	vals := []core.Any{}
-	for _, itm := range le.Items {
-		v, err := itm.Eval(env)
-		if err != nil {
-			return nil, err
-		}
-		vals = append(vals, v)
-	}
-	return NewList(vals...), nil
-}
-
 // QuoteExpr expression represents a quoted form and
-type QuoteExpr struct {
-	Form core.Any
-}
+type QuoteExpr struct{ Form core.Any }
 
 // Eval returns the quoted form unmodified.
 func (qe QuoteExpr) Eval(_ core.Env) (core.Any, error) { return qe.Form, nil }
 
+// DefExpr represents the (def name value) binding form.
 type DefExpr struct {
 	Name  string
 	Value core.Expr
 }
 
+// Eval creates the binding with the name and value in Root env.
 func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 	var val core.Any
 	var err error
@@ -74,7 +59,8 @@ func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 // IfExpr represents the if-then-else form.
 type IfExpr struct{ Test, Then, Else core.Expr }
 
-// Eval the expression
+// Eval evaluates the then or else expr based on truthiness of the test
+// expr result.
 func (ife IfExpr) Eval(env core.Env) (core.Any, error) {
 	target := ife.Else
 	if ife.Test != nil {
@@ -96,7 +82,8 @@ func (ife IfExpr) Eval(env core.Env) (core.Any, error) {
 // DoExpr represents the (do expr*) form.
 type DoExpr struct{ Exprs []core.Expr }
 
-// Eval the expression
+// Eval evaluates each expr in the do form in the order and returns the
+// result of the last eval.
 func (de DoExpr) Eval(env core.Env) (core.Any, error) {
 	var res core.Any
 	var err error
@@ -114,10 +101,12 @@ func (de DoExpr) Eval(env core.Env) (core.Any, error) {
 	return res, nil
 }
 
-type ResolveExpr struct {
-	Symbol Symbol
-}
+// ResolveExpr resolves a symbol from the given environment.
+type ResolveExpr struct{ Symbol Symbol }
 
+// Eval resolves the symbol in the given environment or its parent env
+// and returns the result. Returns ErrNotFound if the symbol was not
+// found in the entire heirarchy.
 func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
 	var v core.Any
 	var err error
@@ -136,6 +125,22 @@ func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
 	return v, err
 }
 
+// GoExpr evaluates an expression in a separate goroutine.
+type GoExpr struct{ Form core.Expr }
+
+// Eval forks the given env to get a child env and launches goroutine
+// with the child env to evaluate the form.
+func (ge GoExpr) Eval(env core.Env) (core.Any, error) {
+	// TODO: verify this.
+	e := env.Child("<go>", nil)
+
+	go func() {
+		_, _ = ge.Form.Eval(e)
+	}()
+
+	return nil, nil
+}
+
 // InvokeExpr performs invocation of target when evaluated.
 type InvokeExpr struct {
 	Name   string
@@ -143,7 +148,8 @@ type InvokeExpr struct {
 	Args   []core.Expr
 }
 
-// Eval the expression
+// Eval evaluates the target expr and invokes the result if it is an
+// Invokable value. Returns error otherwise.
 func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 	val, err := ie.Target.Eval(env)
 	if err != nil {
@@ -166,24 +172,6 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 	}
 
 	return fn.Invoke(args...)
-}
-
-// GoExpr evaluates an expression in a separate goroutine.
-type GoExpr struct {
-	Form core.Expr
-}
-
-// Eval forks the given context to get a child context and launches goroutine
-// with the child context to evaluate the form.
-func (ge GoExpr) Eval(env core.Env) (core.Any, error) {
-	// TODO: verify this.
-	e := env.Child("<go>", nil)
-
-	go func() {
-		_, _ = ge.Form.Eval(e)
-	}()
-
-	return nil, nil
 }
 
 // Invokable represents a value that can be invoked for result.

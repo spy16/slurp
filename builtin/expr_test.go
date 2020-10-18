@@ -83,7 +83,7 @@ func TestDefExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return DefExpr{}, core.New(nil)
 			},
-			wantErr: core.ErrInvalidBindName,
+			wantErr: core.ErrInvalidName,
 		},
 		{
 			title: "NilValue",
@@ -182,6 +182,30 @@ func TestIfExpr_Eval(t *testing.T) {
 				}, core.New(nil)
 			},
 			want: "else-case",
+		},
+	})
+}
+
+func TestGoExpr_Eval(t *testing.T) {
+	t.Parallel()
+	runExprTests(t, []exprTest{
+		{
+			title: "WithError",
+			expr: func() (core.Expr, core.Env) {
+				return &GoExpr{
+					Form: fakeExpr{Err: errUnknown},
+				}, core.New(nil)
+			},
+			wantErr: nil,
+		},
+		{
+			title: "WithSuccess",
+			expr: func() (core.Expr, core.Env) {
+				return &GoExpr{
+					Form: fakeExpr{Res: 100},
+				}, core.New(nil)
+			},
+			wantErr: nil,
 		},
 	})
 }

@@ -2,12 +2,10 @@ package main
 
 import (
 	"log"
-	"strings"
 
 	"github.com/spy16/slurp"
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
-	"github.com/spy16/slurp/reader"
 	"github.com/spy16/slurp/reflector"
 )
 
@@ -44,13 +42,9 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 		"current-user":        user,
 	}
 
-	ruleForm, err := reader.New(strings.NewReader(rule)).One()
-	if err != nil {
-		return false, err
-	}
-
-	env := slurp.New(globals)
-	shouldDiscount, err := env.Eval(ruleForm)
+	ins := slurp.New()
+	_ = ins.Bind(globals)
+	shouldDiscount, err := ins.EvalStr(rule)
 	return builtin.IsTruthy(shouldDiscount), err
 }
 
