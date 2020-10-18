@@ -8,6 +8,35 @@ import (
 
 const rootEnv = "<main>"
 
+var (
+	_ Env      = (*mapEnv)(nil)
+	_ Expr     = (*constExpr)(nil)
+	_ Analyzer = (*constAnalyzer)(nil)
+)
+
+// Eval performs syntax analysis of the given form to produce an Expr
+// and evalautes the Expr against the given Env.
+func Eval(env Env, analyzer Analyzer, form Any) (Any, error) {
+	if analyzer == nil {
+		analyzer = constAnalyzer{}
+	}
+
+	expr, err := analyzer.Analyze(env, form)
+	if err != nil || expr == nil {
+		return nil, err
+	}
+	return expr.Eval(env)
+}
+
+// Root traverses the env hierarchy until it reaches the root env
+// and returns it.
+func Root(env Env) Env {
+	for env.Parent() != nil {
+		env = env.Parent()
+	}
+	return env
+}
+
 // New returns a root Env that can be used to execute forms.
 func New(vars map[string]Any) Env {
 	if vars == nil {
@@ -20,6 +49,7 @@ func New(vars map[string]Any) Env {
 	}
 }
 
+// mapEnv implements Env using a Go native map and RWMutex.
 type mapEnv struct {
 	parent Env
 	name   string
@@ -27,14 +57,10 @@ type mapEnv struct {
 	vars   map[string]Any
 }
 
-// Name should return the name of the frame.
 func (me *mapEnv) Name() string { return me.name }
 
-// Parent should return the parent/outer env of this env.
 func (me *mapEnv) Parent() Env { return me.parent }
 
-// Child should return a new env with given frame name and vars
-// bound. Returned env should have this env as parent/outer.
 func (me *mapEnv) Child(name string, vars map[string]Any) Env {
 	if vars == nil {
 		vars = map[string]Any{}
@@ -46,11 +72,10 @@ func (me *mapEnv) Child(name string, vars map[string]Any) Env {
 	}
 }
 
-// Bind should create a global binding with given name and value.
 func (me *mapEnv) Bind(name string, val Any) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%w: %s", ErrInvalidBindName, name)
+		return fmt.Errorf("%w: %s", ErrInvalidName, name)
 	}
 
 	if me.parent == nil {
@@ -64,9 +89,6 @@ func (me *mapEnv) Bind(name string, val Any) error {
 	return nil
 }
 
-// Resolve should resolve the symbol and return its value. Lookup
-// should be done in locals first (this env) and then done in root
-// env.
 func (me *mapEnv) Resolve(name string) (Any, error) {
 	if me.parent == nil {
 		// only root env is shared between threads. so make sure
@@ -81,3 +103,13 @@ func (me *mapEnv) Resolve(name string) (Any, error) {
 	}
 	return v, nil
 }
+
+type constAnalyzer struct{}
+
+func (constAnalyzer) Analyze(env Env, form Any) (Expr, error) {
+	return constExpr{Const: form}, nil
+}
+
+type constExpr struct{ Const Any }
+
+func (ce constExpr) Eval(_ Env) (Any, error) { return ce.Const, nil }

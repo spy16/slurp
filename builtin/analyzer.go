@@ -7,6 +7,10 @@ import (
 	"github.com/spy16/slurp/core"
 )
 
+// ErrNoExpand is returned during macro-expansion to indicate the form
+// was not expanded.
+var ErrNoExpand = errors.New("no macro expansion")
+
 // NewAnalyzer returns an instance of Analyzer with builtin specia form
 // parsers.
 func NewAnalyzer() *Analyzer {
@@ -19,31 +23,6 @@ func NewAnalyzer() *Analyzer {
 			"def":   parseDef,
 			"macro": parseMacro,
 			"quote": parseQuote,
-			"list": func(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
-				var items []core.Expr
-				err := ForEach(args, func(item core.Any) (bool, error) {
-					ex, err := a.Analyze(env, item)
-					if err != nil {
-						return false, err
-					}
-					items = append(items, ex)
-					return false, nil
-				})
-				return listExpr{Items: items}, err
-			},
-			"syntax-quote": func(a core.Analyzer, env core.Env, args Seq) (core.Expr, error) {
-				form, err := args.First()
-				if err != nil {
-					return nil, err
-				}
-
-				f, err := quoteExpand(a, env, form)
-				if err != nil {
-					return nil, err
-				}
-
-				return a.Analyze(env, f)
-			},
 		},
 	}
 }
@@ -65,7 +44,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 		return ConstExpr{Const: Nil{}}, nil
 	}
 
-	exp, err := MacroExpand(ba, env, form)
+	exp, err := macroExpand(ba, env, form)
 	if err != nil {
 		if !errors.Is(err, ErrNoExpand) {
 			return nil, err
@@ -129,4 +108,42 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
 		return
 	})
 	return ie, err
+}
+
+func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error) {
+	lst, ok := form.(Seq)
+	if !ok {
+		return nil, ErrNoExpand
+	}
+
+	first, err := lst.First()
+	if err != nil {
+		return nil, err
+	}
+
+	var target core.Any
+	sym, ok := first.(Symbol)
+	if ok {
+		v, err := ResolveExpr{Symbol: sym}.Eval(env)
+		if err != nil {
+			return nil, ErrNoExpand
+		}
+		target = v
+	}
+
+	fn, ok := target.(Fn)
+	if !ok || !fn.Macro {
+		return nil, ErrNoExpand
+	}
+
+	sl, err := toSlice(lst)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := fn.Invoke(sl[1:]...)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }

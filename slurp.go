@@ -2,31 +2,24 @@ package slurp
 
 import (
 	"bytes"
-	"errors"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 	"github.com/spy16/slurp/reader"
-	"github.com/spy16/slurp/reflector"
 )
 
 // New returns a new slurp interpreter session.
-func New(globals map[string]core.Any) *Instance {
+func New(opts ...Option) *Instance {
 	buf := bytes.Buffer{}
 	ins := &Instance{
-		buf:      &buf,
-		reader:   reader.New(&buf),
-		env:      core.New(globals),
-		analyzer: builtin.NewAnalyzer(),
+		buf:    &buf,
+		reader: reader.New(&buf),
 	}
 
-	globals["macroexpand"] = reflector.Func("macroexpand", func(form core.Any) (core.Any, error) {
-		f, err := builtin.MacroExpand(ins.analyzer, ins.env, form)
-		if errors.Is(err, builtin.ErrNoExpand) {
-			return form, nil
-		}
-		return f, err
-	})
+	for _, opt := range withDefaults(opts) {
+		opt(ins)
+	}
+
 	return ins
 }
 
@@ -44,6 +37,8 @@ func (ins *Instance) Eval(form core.Any) (core.Any, error) {
 	return core.Eval(ins.env, ins.analyzer, form)
 }
 
+// EvalStr reads forms from the given straing and evalautes it for
+// result.
 func (ins *Instance) EvalStr(s string) (core.Any, error) {
 	if _, err := ins.buf.WriteString(s); err != nil {
 		return nil, err
@@ -60,4 +55,15 @@ func (ins *Instance) EvalStr(s string) (core.Any, error) {
 	}
 
 	return ins.Eval(do)
+}
+
+// Bind can be used to set global bindings that will be available while
+// executing forms.
+func (ins *Instance) Bind(vals map[string]core.Any) error {
+	for k, v := range vals {
+		if err := ins.env.Bind(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
