@@ -6,9 +6,8 @@ import (
 )
 
 var (
-	_ Any              = (*LinkedList)(nil)
-	_ Seq              = (*LinkedList)(nil)
-	_ EqualityProvider = (*LinkedList)(nil)
+	_ Any = (*LinkedList)(nil)
+	_ Seq = (*LinkedList)(nil)
 )
 
 // Cons returns a new seq with `v` added as the first and `seq` as the rest.
@@ -114,34 +113,6 @@ func (ll *LinkedList) SExpr() (string, error) {
 	return SeqString(ll, "(", ")", " ")
 }
 
-// Equals returns true if the other value is a LinkedList and contains the same
-// values.
-func (ll *LinkedList) Equals(other Any) (eq bool, err error) {
-	o, ok := other.(*LinkedList)
-	if !ok || o.count != ll.count {
-		return
-	}
-
-	var s Seq = ll
-	err = ForEach(o, func(any Any) (bool, error) {
-		v, _ := s.First()
-
-		veq, ok := v.(EqualityProvider)
-		if !ok {
-			return false, nil
-		}
-
-		if eq, err = veq.Equals(any); err != nil || !eq {
-			return true, err
-		}
-
-		s, _ = s.Next()
-		return false, nil
-	})
-
-	return
-}
-
 // Conj returns a new list with all the items added at the head of the list.
 func (ll *LinkedList) Conj(items ...Any) (res Seq, err error) {
 	if ll == nil {
@@ -182,4 +153,54 @@ func (ll *LinkedList) Count() (int, error) {
 	}
 
 	return ll.count, nil
+}
+
+func seqEq(s1, s2 Seq) (bool, error) {
+	if sEq, ok := s1.(EqualityProvider); ok {
+		return sEq.Equals(s2)
+	} else if sEq, ok := s2.(EqualityProvider); ok {
+		return sEq.Equals(s1)
+	}
+
+	if s1 == nil && s2 == nil {
+		return true, nil
+	} else if (s1 == nil && s2 != nil) ||
+		(s1 != nil && s2 == nil) {
+		return false, nil
+	}
+
+	c1, err := s1.Count()
+	if err != nil {
+		return false, err
+	}
+
+	c2, err := s2.Count()
+	if err != nil {
+		return false, err
+	}
+
+	if c1 != c2 {
+		return false, nil
+	}
+
+	bothEqual := true
+	for i := 0; i < c1; i++ {
+		v1, err := s1.First()
+		if err != nil {
+			return false, err
+		}
+
+		v2, err := s2.First()
+		if err != nil {
+			return false, err
+		}
+
+		eq, err := Eq(v1, v2)
+		if err != nil {
+			return false, err
+		}
+		bothEqual = bothEqual && eq
+	}
+
+	return bothEqual, nil
 }

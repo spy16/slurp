@@ -88,7 +88,17 @@ func WithEnv(env core.Env) Option {
 func WithAnalyzer(a core.Analyzer) Option {
 	return func(ins *Instance) {
 		if a == nil {
-			a = NewAnalyzer()
+			a = &Analyzer{
+				Specials: map[string]ParseSpecial{
+					"go":    parseGo,
+					"do":    parseDo,
+					"if":    parseIf,
+					"fn":    parseFn,
+					"def":   parseDef,
+					"macro": parseMacro,
+					"quote": parseQuote,
+				},
+			}
 		}
 		ins.analyzer = a
 	}

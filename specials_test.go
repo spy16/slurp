@@ -88,7 +88,17 @@ type specialTest struct {
 }
 
 func runSpecialTest(t *testing.T, tt specialTest, parse ParseSpecial) {
-	a := NewAnalyzer()
+	a := &Analyzer{
+		Specials: map[string]ParseSpecial{
+			"go":    parseGo,
+			"do":    parseDo,
+			"if":    parseIf,
+			"fn":    parseFn,
+			"def":   parseDef,
+			"macro": parseMacro,
+			"quote": parseQuote,
+		},
+	}
 	got, err := parse(a, tt.env, tt.args)
 	if tt.wantErr != nil {
 		assert(t, errors.Is(err, tt.wantErr),

@@ -257,6 +257,12 @@ func Compare(a, b Any) (int, error) {
 
 // Eq returns true if a == b.
 func Eq(a, b Any) (bool, error) {
+	aSeq, aOk := a.(Seq)
+	bSeq, bOk := b.(Seq)
+	if aOk && bOk {
+		return seqEq(aSeq, bSeq)
+	}
+
 	c, err := Compare(a, b)
 	if err != nil {
 		if err == ErrIncomparable {
