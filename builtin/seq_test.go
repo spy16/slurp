@@ -1,8 +1,10 @@
-package core
+package builtin
 
 import (
 	"errors"
 	"testing"
+
+	"github.com/spy16/slurp/core"
 )
 
 func TestCons(t *testing.T) {
@@ -10,9 +12,9 @@ func TestCons(t *testing.T) {
 
 	table := []struct {
 		title   string
-		first   Any
+		first   core.Any
 		rest    Seq
-		items   []Any
+		items   []core.Any
 		wantSz  int
 		wantErr error
 	}{

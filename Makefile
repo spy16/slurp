@@ -1,5 +1,6 @@
 VERSION="`git describe --abbrev=0 --tags`"
 COMMIT="`git rev-list -1 --abbrev-commit HEAD`"
+TEST_PACKAGES=$(shell go list ./... | grep -v /examples/)
 
 all: clean fmt build test
 
@@ -13,7 +14,7 @@ clean:
 
 test:
 	@echo "Running tests..."
-	@go test -cover ./...
+	@go test -cover $(TEST_PACKAGES)
 
 test-verbose:
 	@echo "Running tests..."

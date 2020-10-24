@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -13,9 +14,9 @@ import (
 // fails due to malformed syntax.
 var ErrParseSpecial = errors.New("invalid sepcial form")
 
-func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
-	var de core.DoExpr
-	err := core.ForEach(args, func(item core.Any) (bool, error) {
+func parseDo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+	var de builtin.DoExpr
+	err := builtin.ForEach(args, func(item core.Any) (bool, error) {
 		expr, err := a.Analyze(env, item)
 		if err != nil {
 			return true, err
@@ -29,7 +30,7 @@ func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	return de, nil
 }
 
-func parseIf(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+func parseIf(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -59,14 +60,14 @@ func parseIf(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		}
 	}
 
-	return core.IfExpr{
+	return builtin.IfExpr{
 		Test: exprs[0],
 		Then: exprs[1],
 		Else: exprs[2],
 	}, nil
 }
 
-func parseQuote(a core.Analyzer, _ core.Env, args core.Seq) (core.Expr, error) {
+func parseQuote(a core.Analyzer, _ core.Env, args builtin.Seq) (core.Expr, error) {
 	if count, err := args.Count(); err != nil {
 		return nil, err
 	} else if count != 1 {
@@ -81,10 +82,10 @@ func parseQuote(a core.Analyzer, _ core.Env, args core.Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return core.QuoteExpr{Form: first}, nil
+	return builtin.QuoteExpr{Form: first}, nil
 }
 
-func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+func parseDef(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
 	e := core.Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
 
 	if args == nil {
@@ -103,7 +104,7 @@ func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	sym, ok := first.(core.Symbol)
+	sym, ok := first.(builtin.Symbol)
 	if !ok {
 		return nil, e.With(fmt.Sprintf(
 			"first arg must be symbol, not '%s'", reflect.TypeOf(first)))
@@ -124,13 +125,13 @@ func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return core.DefExpr{
+	return builtin.DefExpr{
 		Name:  string(sym),
 		Value: res,
 	}, nil
 }
 
-func parseGo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+func parseGo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -153,38 +154,38 @@ func parseGo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	return core.GoExpr{Form: e}, nil
+	return builtin.GoExpr{Form: e}, nil
 }
 
 // parseFn parses (fn name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseFn(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
+func parseFn(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
 	}
-	return core.ConstExpr{Const: *fn}, nil
+	return builtin.ConstExpr{Const: *fn}, nil
 }
 
 // parseMacro parses (macro name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseMacro(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
+func parseMacro(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
 	}
 	fn.Macro = true
-	return core.ConstExpr{Const: *fn}, nil
+	return builtin.ConstExpr{Const: *fn}, nil
 }
 
-func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*core.Fn, error) {
-	fn := core.Fn{}
+func parseFnDef(a core.Analyzer, env core.Env, argSeq builtin.Seq) (*builtin.Fn, error) {
+	fn := builtin.Fn{}
 
 	cnt, err := argSeq.Count()
 	if err != nil {
 		return nil, err
 	} else if cnt < 1 {
-		return nil, fmt.Errorf("%w: got %d, want at-least 1", core.ErrArity, cnt)
+		return nil, fmt.Errorf("%w: got %d, want at-least 1", builtin.ErrArity, cnt)
 	}
 
 	args, err := toSlice(argSeq)
@@ -193,29 +194,29 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*core.Fn, error
 	}
 
 	i := 0
-	if sym, ok := args[i].(core.Symbol); ok {
+	if sym, ok := args[i].(builtin.Symbol); ok {
 		fn.Name = strings.TrimSpace(sym.String())
 		i++
 	}
 
-	if str, ok := args[i].(core.String); ok {
+	if str, ok := args[i].(builtin.String); ok {
 		fn.Doc = string(str)
 		i++
 	}
 
 	// TODO: add support for multi-arity parsing.
 
-	fnArgs, ok := args[i].(core.Seq)
+	fnArgs, ok := args[i].(builtin.Seq)
 	if !ok {
 		return nil, fmt.Errorf(
 			"expecting a list of symbols, got '%s'", reflect.TypeOf(args[i]))
 	}
 	i++
 
-	f := core.Func{}
+	f := builtin.Func{}
 	fnEnv := env.Child(fn.Name, nil)
-	err = core.ForEach(fnArgs, func(item core.Any) (bool, error) {
-		sym, ok := item.(core.Symbol)
+	err = builtin.ForEach(fnArgs, func(item core.Any) (bool, error) {
+		sym, ok := item.(builtin.Symbol)
 		if !ok {
 			return true, fmt.Errorf(
 				"expecting parameter to be a symbol, got '%s'",
@@ -231,7 +232,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*core.Fn, error
 	})
 
 	// wrap body in (do <expr>*) and analyze.
-	bodyExprs, err := core.Cons(core.Symbol("do"), core.NewList(args[i:]...))
+	bodyExprs, err := builtin.Cons(builtin.Symbol("do"), builtin.NewList(args[i:]...))
 	if err != nil {
 		return nil, err
 	}
@@ -248,9 +249,9 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*core.Fn, error
 	return &fn, nil
 }
 
-func toSlice(seq core.Seq) ([]core.Any, error) {
+func toSlice(seq builtin.Seq) ([]core.Any, error) {
 	var sl []core.Any
-	err := core.ForEach(seq, func(item core.Any) (bool, error) {
+	err := builtin.ForEach(seq, func(item core.Any) (bool, error) {
 		sl = append(sl, item)
 		return false, nil
 	})

@@ -1,18 +1,20 @@
-package core
+package builtin
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/spy16/slurp/core"
 )
 
 var (
-	_ Any = (*LinkedList)(nil)
-	_ Seq = (*LinkedList)(nil)
+	_ core.Any = (*LinkedList)(nil)
+	_ Seq      = (*LinkedList)(nil)
 )
 
 // Cons returns a new seq with `v` added as the first and `seq` as the rest.
 // seq can be nil as well.
-func Cons(v Any, seq Seq) (Seq, error) {
+func Cons(v core.Any, seq Seq) (Seq, error) {
 	newSeq := &LinkedList{
 		first: v,
 		rest:  seq,
@@ -35,7 +37,7 @@ func Cons(v Any, seq Seq) (Seq, error) {
 func SeqString(seq Seq, begin, end, sep string) (string, error) {
 	var b strings.Builder
 	b.WriteString(begin)
-	err := ForEach(seq, func(item Any) (bool, error) {
+	err := ForEach(seq, func(item core.Any) (bool, error) {
 		if sxpr, ok := item.(SExpressable); ok {
 			s, err := sxpr.SExpr()
 			if err != nil {
@@ -60,8 +62,8 @@ func SeqString(seq Seq, begin, end, sep string) (string, error) {
 
 // ForEach reads from the sequence and calls the given function for each item.
 // Function can return true to stop the iteration.
-func ForEach(seq Seq, call func(item Any) (bool, error)) (err error) {
-	var v Any
+func ForEach(seq Seq, call func(item core.Any) (bool, error)) (err error) {
+	var v core.Any
 	var done bool
 	for seq != nil {
 		if v, err = seq.First(); err != nil || v == nil {
@@ -81,7 +83,7 @@ func ForEach(seq Seq, call func(item Any) (bool, error)) (err error) {
 }
 
 // NewList returns a new linked-list containing given values.
-func NewList(items ...Any) Seq {
+func NewList(items ...core.Any) Seq {
 	if len(items) == 0 {
 		return Seq((*LinkedList)(nil))
 	}
@@ -100,7 +102,7 @@ func NewList(items ...Any) Seq {
 // LinkedList implements an immutable Seq using linked-list data structure.
 type LinkedList struct {
 	count int
-	first Any
+	first core.Any
 	rest  Seq
 }
 
@@ -114,7 +116,7 @@ func (ll *LinkedList) SExpr() (string, error) {
 }
 
 // Conj returns a new list with all the items added at the head of the list.
-func (ll *LinkedList) Conj(items ...Any) (res Seq, err error) {
+func (ll *LinkedList) Conj(items ...core.Any) (res Seq, err error) {
 	if ll == nil {
 		res = &LinkedList{}
 	} else {
@@ -131,7 +133,7 @@ func (ll *LinkedList) Conj(items ...Any) (res Seq, err error) {
 }
 
 // First returns the head or first item of the list.
-func (ll *LinkedList) First() (Any, error) {
+func (ll *LinkedList) First() (core.Any, error) {
 	if ll == nil {
 		return nil, nil
 	}

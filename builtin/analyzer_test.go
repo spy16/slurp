@@ -1,11 +1,11 @@
-package slurp_test
+package builtin_test
 
 import (
 	"errors"
 	"reflect"
 	"testing"
 
-	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -13,8 +13,8 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	t.Parallel()
 
 	hundredFunc := fakeFn{}
-	e := core.New(map[string]core.Any{
-		"foo":     core.Keyword("hello"),
+	e := builtin.New(map[string]core.Any{
+		"foo":     builtin.Keyword("hello"),
 		"hundred": hundredFunc,
 	})
 
@@ -27,38 +27,38 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	}{
 		{
 			title: "SpecialForm",
-			form:  core.NewList(core.Symbol("foo")),
-			want:  core.ConstExpr{Const: "foo"},
+			form:  builtin.NewList(builtin.Symbol("foo")),
+			want:  builtin.ConstExpr{Const: "foo"},
 		},
 		{
 			title: "EmptySeq",
-			form:  core.NewList(),
-			want:  core.ConstExpr{Const: core.NewList()},
+			form:  builtin.NewList(),
+			want:  builtin.ConstExpr{Const: builtin.NewList()},
 		},
 		{
 			title: "SymbolForm",
 			env:   e,
-			form:  core.Symbol("foo"),
-			want:  core.ResolveExpr{Symbol: core.Symbol("foo")},
+			form:  builtin.Symbol("foo"),
+			want:  builtin.ResolveExpr{Symbol: builtin.Symbol("foo")},
 		},
 		{
 			title: "Invokable",
 			env:   e,
-			form:  core.NewList(core.Symbol("hundred"), 1),
-			want: core.InvokeExpr{
+			form:  builtin.NewList(builtin.Symbol("hundred"), 1),
+			want: builtin.InvokeExpr{
 				Name:   "hundred",
-				Target: core.ResolveExpr{Symbol: "hundred"},
-				Args:   []core.Expr{core.ConstExpr{Const: 1}},
+				Target: builtin.ResolveExpr{Symbol: "hundred"},
+				Args:   []core.Expr{builtin.ConstExpr{Const: 1}},
 			},
 		},
 	}
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			ba := &slurp.Analyzer{
-				Specials: map[string]slurp.ParseSpecial{
-					"foo": func(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
-						return core.ConstExpr{Const: "foo"}, nil
+			ba := &builtin.Analyzer{
+				Specials: map[string]builtin.ParseSpecial{
+					"foo": func(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+						return builtin.ConstExpr{Const: "foo"}, nil
 					},
 				},
 			}

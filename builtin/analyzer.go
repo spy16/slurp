@@ -1,4 +1,4 @@
-package slurp
+package builtin
 
 import (
 	"errors"
@@ -19,13 +19,13 @@ type Analyzer struct {
 
 // ParseSpecial validates a special form invocation, parse the form and
 // returns an expression that can be evaluated for result.
-type ParseSpecial func(analyzer core.Analyzer, env core.Env, args core.Seq) (core.Expr, error)
+type ParseSpecial func(analyzer core.Analyzer, env core.Env, args Seq) (core.Expr, error)
 
 // Analyze performs syntactic analysis of given form and returns an Expr
 // that can be evaluated for result against an Env.
 func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
-	if core.IsNil(form) {
-		return core.ConstExpr{Const: core.Nil{}}, nil
+	if IsNil(form) {
+		return ConstExpr{Const: Nil{}}, nil
 	}
 
 	exp, err := macroExpand(ba, env, form)
@@ -37,10 +37,10 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	}
 
 	switch f := exp.(type) {
-	case core.Symbol:
-		return core.ResolveExpr{Symbol: f}, nil
+	case Symbol:
+		return ResolveExpr{Symbol: f}, nil
 
-	case core.Seq:
+	case Seq:
 		cnt, err := f.Count()
 		if err != nil {
 			return nil, err
@@ -51,10 +51,10 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 		return ba.analyzeSeq(env, f)
 	}
 
-	return core.ConstExpr{Const: exp}, nil
+	return ConstExpr{Const: exp}, nil
 }
 
-func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
+func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
 	//	Get the call target.  This is the first item in the sequence.
 	first, err := seq.First()
 	if err != nil {
@@ -64,7 +64,7 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 	// The call target may be a special form.  In this case, we need to get the
 	// corresponding parser function, which will take care of parsing/analyzing
 	// the tail.
-	if sym, ok := first.(core.Symbol); ok {
+	if sym, ok := first.(Symbol); ok {
 		if parse, found := ba.Specials[string(sym)]; found {
 			next, err := seq.Next()
 			if err != nil {
@@ -76,10 +76,10 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 
 	// Call target is not a special form and must be a Invokable. Analyze
 	// the arguments and create an InvokeExpr.
-	ie := core.InvokeExpr{
+	ie := InvokeExpr{
 		Name: fmt.Sprintf("%v", first),
 	}
-	err = core.ForEach(seq, func(item core.Any) (done bool, err error) {
+	err = ForEach(seq, func(item core.Any) (done bool, err error) {
 		if ie.Target == nil {
 			ie.Target, err = ba.Analyze(env, first)
 			return
@@ -95,7 +95,7 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 }
 
 func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error) {
-	lst, ok := form.(core.Seq)
+	lst, ok := form.(Seq)
 	if !ok {
 		return nil, ErrNoExpand
 	}
@@ -106,16 +106,16 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 	}
 
 	var target core.Any
-	sym, ok := first.(core.Symbol)
+	sym, ok := first.(Symbol)
 	if ok {
-		v, err := core.ResolveExpr{Symbol: sym}.Eval(env)
+		v, err := ResolveExpr{Symbol: sym}.Eval(env)
 		if err != nil {
 			return nil, ErrNoExpand
 		}
 		target = v
 	}
 
-	fn, ok := target.(core.Fn)
+	fn, ok := target.(Fn)
 	if !ok || !fn.Macro {
 		return nil, ErrNoExpand
 	}
@@ -130,4 +130,13 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 		return nil, err
 	}
 	return res, nil
+}
+
+func toSlice(seq Seq) ([]core.Any, error) {
+	var sl []core.Any
+	err := ForEach(seq, func(item core.Any) (bool, error) {
+		sl = append(sl, item)
+		return false, nil
+	})
+	return sl, err
 }

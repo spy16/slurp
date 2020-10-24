@@ -1,8 +1,10 @@
-package core
+package builtin
 
 import (
 	"errors"
 	"testing"
+
+	"github.com/spy16/slurp/core"
 )
 
 func TestCompare(t *testing.T) {
@@ -10,7 +12,7 @@ func TestCompare(t *testing.T) {
 
 	table := []struct {
 		title   string
-		a, b    Any
+		a, b    core.Any
 		want    int
 		wantErr error
 	}{
@@ -122,7 +124,7 @@ func testSExpr(t *testing.T, v SExpressable, want string) {
 	assert(t, want == s, `want="%s" got="%s"`, want, s)
 }
 
-func testComp(t *testing.T, v Comparable, other Any, want int, wantErr error) {
+func testComp(t *testing.T, v Comparable, other core.Any, want int, wantErr error) {
 	got, err := v.Comp(other)
 	if wantErr != nil {
 		assert(t, errors.Is(err, wantErr), "wantErr=%#v\ngotErr=%#v", wantErr, err)
@@ -130,4 +132,10 @@ func testComp(t *testing.T, v Comparable, other Any, want int, wantErr error) {
 		assert(t, err == nil, "unexpected err: %#v", err)
 	}
 	assert(t, got == want, "want=%d got=%d", want, got)
+}
+
+func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
+	if !cond {
+		t.Errorf(msg, args...)
+	}
 }
