@@ -1,4 +1,4 @@
-package core
+package builtin
 
 import (
 	"errors"
@@ -6,17 +6,19 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+
+	"github.com/spy16/slurp/core"
 )
 
 var (
-	_ Any = Nil{}
-	_ Any = Int64(0)
-	_ Any = Float64(1.123123)
-	_ Any = Bool(true)
-	_ Any = Char('∂')
-	_ Any = String("specimen")
-	_ Any = Symbol("specimen")
-	_ Any = Keyword("specimen")
+	_ core.Any = Nil{}
+	_ core.Any = Int64(0)
+	_ core.Any = Float64(1.123123)
+	_ core.Any = Bool(true)
+	_ core.Any = Char('∂')
+	_ core.Any = String("specimen")
+	_ core.Any = Symbol("specimen")
+	_ core.Any = Keyword("specimen")
 
 	_ Comparable = Int64(0)
 	_ Comparable = Float64(0)
@@ -37,30 +39,27 @@ var (
 	ErrIncomparable = errors.New("incomparable types")
 )
 
-// Any represents any slurp value.
-type Any interface{}
-
 // Seq represents a sequence of values.
 type Seq interface {
 	// Count returns the number of items in the sequence.
 	Count() (int, error)
 
 	// First returns the first item in the sequence.
-	First() (Any, error)
+	First() (core.Any, error)
 
 	// Next returns the tail of the sequence (i.e, sequence after
 	// excluding the head). Returns nil, nil if it has no tail.
 	Next() (Seq, error)
 
 	// Conj returns a new sequence with given items conjoined.
-	Conj(items ...Any) (Seq, error)
+	Conj(items ...core.Any) (Seq, error)
 }
 
 // Invokable represents a value that can be invoked for result.
 type Invokable interface {
 	// Invoke is called if this value appears as the first argument of
 	// invocation form (i.e., list).
-	Invoke(args ...Any) (Any, error)
+	Invoke(args ...core.Any) (core.Any, error)
 }
 
 // SExpressable forms can be rendered as s-expressions.
@@ -79,12 +78,12 @@ type Comparable interface {
 	//  1 if v > other
 	//
 	// If the values are not comparable, ErrIncomparable is returned.
-	Comp(other Any) (int, error)
+	Comp(other core.Any) (int, error)
 }
 
 // EqualityProvider asserts equality between two values.
 type EqualityProvider interface {
-	Equals(other Any) (bool, error)
+	Equals(other core.Any) (bool, error)
 }
 
 // Nil represents the Value 'nil'.
@@ -94,7 +93,7 @@ type Nil struct{}
 func (Nil) SExpr() (string, error) { return "nil", nil }
 
 // Equals returns true IFF other is nil.
-func (Nil) Equals(other Any) (bool, error) { return IsNil(other), nil }
+func (Nil) Equals(other core.Any) (bool, error) { return IsNil(other), nil }
 
 func (Nil) String() string { return "nil" }
 
@@ -105,7 +104,7 @@ type Int64 int64
 func (i64 Int64) SExpr() (string, error) { return i64.String(), nil }
 
 // Comp performs comparison against another Int64.
-func (i64 Int64) Comp(other Any) (int, error) {
+func (i64 Int64) Comp(other core.Any) (int, error) {
 	if n, ok := other.(Int64); ok {
 		switch {
 		case i64 > n:
@@ -129,7 +128,7 @@ type Float64 float64
 func (f64 Float64) SExpr() (string, error) { return f64.String(), nil }
 
 // Comp performs comparison against another Float64.
-func (f64 Float64) Comp(other Any) (int, error) {
+func (f64 Float64) Comp(other core.Any) (int, error) {
 	if n, ok := other.(Float64); ok {
 		switch {
 		case f64 > n:
@@ -158,7 +157,7 @@ type Bool bool
 func (b Bool) SExpr() (string, error) { return b.String(), nil }
 
 // Equals returns true if 'other' is a boolean and has same logical Value.
-func (b Bool) Equals(other Any) (bool, error) {
+func (b Bool) Equals(other core.Any) (bool, error) {
 	val, ok := other.(Bool)
 	return ok && (val == b), nil
 }
@@ -179,7 +178,7 @@ func (char Char) SExpr() (string, error) {
 }
 
 // Equals returns true if the other Value is also a character and has same Value.
-func (char Char) Equals(other Any) (bool, error) {
+func (char Char) Equals(other core.Any) (bool, error) {
 	val, isChar := other.(Char)
 	return isChar && (val == char), nil
 }
@@ -193,7 +192,7 @@ type String string
 func (str String) SExpr() (string, error) { return str.String(), nil }
 
 // Equals returns true if 'other' is string and has same Value.
-func (str String) Equals(other Any) (bool, error) {
+func (str String) Equals(other core.Any) (bool, error) {
 	otherStr, isStr := other.(String)
 	return isStr && (otherStr == str), nil
 }
@@ -207,7 +206,7 @@ type Symbol string
 func (sym Symbol) SExpr() (string, error) { return string(sym), nil }
 
 // Equals returns true if the other Value is also a symbol and has same Value.
-func (sym Symbol) Equals(other Any) (bool, error) {
+func (sym Symbol) Equals(other core.Any) (bool, error) {
 	otherSym, isSym := other.(Symbol)
 	return isSym && (sym == otherSym), nil
 }
@@ -221,7 +220,7 @@ type Keyword string
 func (kw Keyword) SExpr() (string, error) { return kw.String(), nil }
 
 // Equals returns true if the other Value is keyword and has same Value.
-func (kw Keyword) Equals(other Any) (bool, error) {
+func (kw Keyword) Equals(other core.Any) (bool, error) {
 	otherKW, isKeyword := other.(Keyword)
 	return isKeyword && (otherKW == kw), nil
 }
@@ -235,7 +234,7 @@ func (kw Keyword) String() string { return fmt.Sprintf(":%s", string(kw)) }
 //  -1 if a < b.
 //
 // If the values are not comparable, ErrIncomparable is returned.
-func Compare(a, b Any) (int, error) {
+func Compare(a, b core.Any) (int, error) {
 	if cmp, ok := a.(Comparable); ok {
 		return cmp.Comp(b)
 	}
@@ -256,7 +255,7 @@ func Compare(a, b Any) (int, error) {
 }
 
 // Eq returns true if a == b.
-func Eq(a, b Any) (bool, error) {
+func Eq(a, b core.Any) (bool, error) {
 	aSeq, aOk := a.(Seq)
 	bSeq, bOk := b.(Seq)
 	if aOk && bOk {
@@ -274,7 +273,7 @@ func Eq(a, b Any) (bool, error) {
 }
 
 // IsNil returns true if value is native go `nil` or `Nil{}`.
-func IsNil(v Any) bool {
+func IsNil(v core.Any) bool {
 	if v == nil {
 		return true
 	}
@@ -283,7 +282,7 @@ func IsNil(v Any) bool {
 }
 
 // IsTruthy returns true if the value has a logical vale of `true`.
-func IsTruthy(v Any) bool {
+func IsTruthy(v core.Any) bool {
 	if IsNil(v) {
 		return false
 	}

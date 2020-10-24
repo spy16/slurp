@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/spy16/slurp"
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -43,7 +44,7 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 	ins := slurp.New()
 	_ = ins.Bind(globals)
 	shouldDiscount, err := ins.EvalStr(rule)
-	return core.IsTruthy(shouldDiscount), err
+	return builtin.IsTruthy(shouldDiscount), err
 }
 
 func isNotBlacklisted(user string) bool {

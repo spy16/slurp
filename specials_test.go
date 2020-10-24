@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
@@ -14,25 +15,25 @@ func Test_parseDo(t *testing.T) {
 	table := []specialTest{
 		{
 			title: "NilArgs",
-			env:   core.New(nil),
+			env:   builtin.New(nil),
 			args:  nil,
-			want:  core.DoExpr{},
+			want:  builtin.DoExpr{},
 		},
 		{
 			title: "SomeArgs",
-			env:   core.New(nil),
-			args:  core.NewList(1, 2),
-			want: core.DoExpr{
+			env:   builtin.New(nil),
+			args:  builtin.NewList(1, 2),
+			want: builtin.DoExpr{
 				Exprs: []core.Expr{
-					core.ConstExpr{Const: 1},
-					core.ConstExpr{Const: 2},
+					builtin.ConstExpr{Const: 1},
+					builtin.ConstExpr{Const: 2},
 				},
 			},
 		},
 		{
 			title:   "AnalyzeFail",
-			env:     core.New(nil),
-			args:    core.NewList(1, core.NewList(core.Symbol("def"))),
+			env:     builtin.New(nil),
+			args:    builtin.NewList(1, builtin.NewList(builtin.Symbol("def"))),
 			want:    nil,
 			wantErr: ErrParseSpecial,
 		},
@@ -56,16 +57,16 @@ func Test_parseDef(t *testing.T) {
 		},
 		{
 			title:   "SomeArgs",
-			args:    core.NewList(1, 2),
+			args:    builtin.NewList(1, 2),
 			want:    nil,
 			wantErr: ErrParseSpecial,
 		},
 		{
 			title: "Valid",
-			args:  core.NewList(core.Symbol("foo"), 100),
-			want: core.DefExpr{
+			args:  builtin.NewList(builtin.Symbol("foo"), 100),
+			want: builtin.DefExpr{
 				Name:  "foo",
-				Value: core.ConstExpr{Const: 100},
+				Value: builtin.ConstExpr{Const: 100},
 			},
 			wantErr: nil,
 		},
@@ -73,7 +74,7 @@ func Test_parseDef(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = core.New(nil)
+			tt.env = builtin.New(nil)
 			runSpecialTest(t, tt, parseDef)
 		})
 	}
@@ -82,14 +83,14 @@ func Test_parseDef(t *testing.T) {
 type specialTest struct {
 	title   string
 	env     core.Env
-	args    core.Seq
+	args    builtin.Seq
 	want    core.Expr
 	wantErr error
 }
 
-func runSpecialTest(t *testing.T, tt specialTest, parse ParseSpecial) {
-	a := &Analyzer{
-		Specials: map[string]ParseSpecial{
+func runSpecialTest(t *testing.T, tt specialTest, parse builtin.ParseSpecial) {
+	a := &builtin.Analyzer{
+		Specials: map[string]builtin.ParseSpecial{
 			"go":    parseGo,
 			"do":    parseDo,
 			"if":    parseIf,

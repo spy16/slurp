@@ -3,6 +3,7 @@ package slurp
 import (
 	"bytes"
 
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 	"github.com/spy16/slurp/reader"
 )
@@ -37,7 +38,7 @@ type Instance struct {
 // Eval performs syntax analysis of the given form to produce an Expr
 // and evalautes the Expr for result.
 func (ins *Instance) Eval(form core.Any) (core.Any, error) {
-	return core.Eval(ins.env, ins.analyzer, form)
+	return builtin.Eval(ins.env, ins.analyzer, form)
 }
 
 // EvalStr reads forms from the given straing and evalautes it for
@@ -52,7 +53,7 @@ func (ins *Instance) EvalStr(s string) (core.Any, error) {
 		return nil, err
 	}
 
-	do, err := core.Cons(core.Symbol("do"), core.NewList(f...))
+	do, err := builtin.Cons(builtin.Symbol("do"), builtin.NewList(f...))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (ins *Instance) Bind(vals map[string]core.Any) error {
 func WithEnv(env core.Env) Option {
 	return func(ins *Instance) {
 		if env == nil {
-			env = core.New(nil)
+			env = builtin.New(nil)
 		}
 		ins.env = env
 	}
@@ -88,8 +89,8 @@ func WithEnv(env core.Env) Option {
 func WithAnalyzer(a core.Analyzer) Option {
 	return func(ins *Instance) {
 		if a == nil {
-			a = &Analyzer{
-				Specials: map[string]ParseSpecial{
+			a = &builtin.Analyzer{
+				Specials: map[string]builtin.ParseSpecial{
 					"go":    parseGo,
 					"do":    parseDo,
 					"if":    parseIf,

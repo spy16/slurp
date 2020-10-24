@@ -1,13 +1,14 @@
 package reader
 
 import (
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 )
 
 var defaultSymTable = map[string]core.Any{
-	"nil":   core.Nil{},
-	"true":  core.Bool(true),
-	"false": core.Bool(false),
+	"nil":   builtin.Nil{},
+	"true":  builtin.Bool(true),
+	"false": builtin.Bool(false),
 }
 
 // Option values can be used with New() to configure the reader during init.
