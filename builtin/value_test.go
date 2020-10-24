@@ -39,20 +39,20 @@ func TestCompare(t *testing.T) {
 			a:       Symbol("foo"),
 			b:       Symbol("bar"),
 			want:    0,
-			wantErr: ErrIncomparable,
+			wantErr: core.ErrIncomparable,
 		},
 		{
 			title:   "UnEqualWithEqualityProvider",
 			a:       10,
 			b:       Symbol("foo"),
 			want:    0,
-			wantErr: ErrIncomparable,
+			wantErr: core.ErrIncomparable,
 		},
 	}
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			got, err := Compare(tt.a, tt.b)
+			got, err := core.Compare(tt.a, tt.b)
 			if tt.wantErr != nil {
 				assert(t, errors.Is(err, tt.wantErr),
 					"wantErr=%#v\ngot=%#v", tt.wantErr, err)
@@ -69,15 +69,15 @@ func TestEq(t *testing.T) {
 	var got bool
 	var err error
 
-	got, err = Eq(Int64(10), Int64(10))
+	got, err = core.Eq(Int64(10), Int64(10))
 	assert(t, err == nil, "unexpected error: %#v", err)
 	assert(t, got == true, "want=true got=%t", got)
 
-	got, err = Eq(Int64(10), Int64(100))
+	got, err = core.Eq(Int64(10), Int64(100))
 	assert(t, err == nil, "unexpected error: %#v", err)
 	assert(t, got == false, "want=false got=%t", got)
 
-	got, err = Eq(Int64(10), Symbol("foo"))
+	got, err = core.Eq(Int64(10), Symbol("foo"))
 	assert(t, err == nil, "unexpected error: %#v", err)
 	assert(t, got == false, "want=false got=%t", got)
 }
@@ -92,7 +92,7 @@ func TestInt64(t *testing.T) {
 	v := Int64(100)
 	assert(t, v.String() == "100", `want="100" got="%s"`, v.String())
 	testSExpr(t, v, "100")
-	testComp(t, v, 10, 0, ErrIncomparable)
+	testComp(t, v, 10, 0, core.ErrIncomparable)
 	testComp(t, v, v, 0, nil)
 	testComp(t, v, Int64(1), 1, nil)
 	testComp(t, v, Int64(10000), -1, nil)
@@ -105,7 +105,7 @@ func TestFloat64(t *testing.T) {
 	v := Float64(100)
 	assert(t, v.String() == "100.000000", `want="100.000000" got="%s"`, v.String())
 	testSExpr(t, v, "100.000000")
-	testComp(t, v, 10, 0, ErrIncomparable)
+	testComp(t, v, 10, 0, core.ErrIncomparable)
 	testComp(t, v, v, 0, nil)
 	testComp(t, v, Float64(1), 1, nil)
 	testComp(t, v, Float64(10000), -1, nil)
@@ -118,13 +118,13 @@ func TestIsTruthy(t *testing.T) {
 	assert(t, IsTruthy(false) == false, "want=false got=true")
 }
 
-func testSExpr(t *testing.T, v SExpressable, want string) {
+func testSExpr(t *testing.T, v core.SExpressable, want string) {
 	s, err := v.SExpr()
 	assert(t, err == nil, "unexpected err: %#v", err)
 	assert(t, want == s, `want="%s" got="%s"`, want, s)
 }
 
-func testComp(t *testing.T, v Comparable, other core.Any, want int, wantErr error) {
+func testComp(t *testing.T, v core.Comparable, other core.Any, want int, wantErr error) {
 	got, err := v.Comp(other)
 	if wantErr != nil {
 		assert(t, errors.Is(err, wantErr), "wantErr=%#v\ngotErr=%#v", wantErr, err)

@@ -67,7 +67,7 @@ Reader returned by `reader.New(...)`, is configured to support following forms:
 * Nil: `nil` is represented as a zero-allocation empty struct in Go.
 * Keywords: Keywords represent symbolic data and start with `:`. (e.g., `:foo`)
 * Symbols: Symbols can be used to name a value and can contain any Unicode symbol.
-* Lists: Lists are zero or more forms contained within parenthesis. (e.g., `(1 2 3)`, `(1 :hello ())`).
+* Lists: Lists are zero or more forms contained within parentheses. (e.g., `(1 2 3)`, `(1 :hello ())`).
 
 ### Evaluation
 

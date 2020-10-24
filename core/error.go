@@ -5,20 +5,6 @@ import (
 	"fmt"
 )
 
-var (
-	// ErrNotFound is returned by Env when a binding is not found
-	// for a given symbol/name.
-	ErrNotFound = errors.New("not found")
-
-	// ErrInvalidName is returned by Env when the bind name is
-	// invalid.
-	ErrInvalidName = errors.New("invalid bind name")
-
-	// ErrNotInvokable is returned by InvokeExpr when the target is
-	// not invokable.
-	ErrNotInvokable = errors.New("not invokable")
-)
-
 // Error is returned by all slurp operations. Cause indicates the underlying
 // error type. Use errors.Is() with Cause to check for specific errors.
 type Error struct {

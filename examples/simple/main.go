@@ -19,7 +19,7 @@ var globals = map[string]core.Any{
 	"version": builtin.String("1.0"),
 
 	// custom Go functions.
-	"=": slurp.Func("=", builtin.Eq),
+	"=": slurp.Func("=", core.Eq),
 	"+": slurp.Func("sum", func(a ...int) int {
 		sum := 0
 		for _, item := range a {

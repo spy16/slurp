@@ -19,7 +19,7 @@ type Analyzer struct {
 
 // ParseSpecial validates a special form invocation, parse the form and
 // returns an expression that can be evaluated for result.
-type ParseSpecial func(analyzer core.Analyzer, env core.Env, args Seq) (core.Expr, error)
+type ParseSpecial func(analyzer core.Analyzer, env core.Env, args core.Seq) (core.Expr, error)
 
 // Analyze performs syntactic analysis of given form and returns an Expr
 // that can be evaluated for result against an Env.
@@ -40,7 +40,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	case Symbol:
 		return ResolveExpr{Symbol: f}, nil
 
-	case Seq:
+	case core.Seq:
 		cnt, err := f.Count()
 		if err != nil {
 			return nil, err
@@ -54,7 +54,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	return ConstExpr{Const: exp}, nil
 }
 
-func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
+func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 	//	Get the call target.  This is the first item in the sequence.
 	first, err := seq.First()
 	if err != nil {
@@ -79,7 +79,7 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
 	ie := InvokeExpr{
 		Name: fmt.Sprintf("%v", first),
 	}
-	err = ForEach(seq, func(item core.Any) (done bool, err error) {
+	err = core.ForEach(seq, func(item core.Any) (done bool, err error) {
 		if ie.Target == nil {
 			ie.Target, err = ba.Analyze(env, first)
 			return
@@ -95,7 +95,7 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq Seq) (core.Expr, error) {
 }
 
 func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error) {
-	lst, ok := form.(Seq)
+	lst, ok := form.(core.Seq)
 	if !ok {
 		return nil, ErrNoExpand
 	}
@@ -132,9 +132,9 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 	return res, nil
 }
 
-func toSlice(seq Seq) ([]core.Any, error) {
+func toSlice(seq core.Seq) ([]core.Any, error) {
 	var sl []core.Any
-	err := ForEach(seq, func(item core.Any) (bool, error) {
+	err := core.ForEach(seq, func(item core.Any) (bool, error) {
 		sl = append(sl, item)
 		return false, nil
 	})

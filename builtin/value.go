@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -20,71 +19,16 @@ var (
 	_ core.Any = Symbol("specimen")
 	_ core.Any = Keyword("specimen")
 
-	_ Comparable = Int64(0)
-	_ Comparable = Float64(0)
+	_ core.Comparable = Int64(0)
+	_ core.Comparable = Float64(0)
 
-	_ EqualityProvider = Nil{}
-	_ EqualityProvider = Bool(false)
-	_ EqualityProvider = Char('a')
-	_ EqualityProvider = String("specimen")
-	_ EqualityProvider = Symbol("specimen")
-	_ EqualityProvider = Keyword("specimen")
+	_ core.EqualityProvider = Nil{}
+	_ core.EqualityProvider = Bool(false)
+	_ core.EqualityProvider = Char('a')
+	_ core.EqualityProvider = String("specimen")
+	_ core.EqualityProvider = Symbol("specimen")
+	_ core.EqualityProvider = Keyword("specimen")
 )
-
-var (
-	// ErrIncomparable is returned by Compare() when a comparison
-	// between two types is undefined. Users should  consider the
-	// types to  be not equal  in such cases, but not  assume any
-	// ordering.
-	ErrIncomparable = errors.New("incomparable types")
-)
-
-// Seq represents a sequence of values.
-type Seq interface {
-	// Count returns the number of items in the sequence.
-	Count() (int, error)
-
-	// First returns the first item in the sequence.
-	First() (core.Any, error)
-
-	// Next returns the tail of the sequence (i.e, sequence after
-	// excluding the head). Returns nil, nil if it has no tail.
-	Next() (Seq, error)
-
-	// Conj returns a new sequence with given items conjoined.
-	Conj(items ...core.Any) (Seq, error)
-}
-
-// Invokable represents a value that can be invoked for result.
-type Invokable interface {
-	// Invoke is called if this value appears as the first argument of
-	// invocation form (i.e., list).
-	Invoke(args ...core.Any) (core.Any, error)
-}
-
-// SExpressable forms can be rendered as s-expressions.
-type SExpressable interface {
-	// SExpr returns a parsable s-expression of the given value. Returns
-	// error if not possible.
-	SExpr() (string, error)
-}
-
-// Comparable values define a partial ordering.
-type Comparable interface {
-	// Comp(pare) the value to another value.  Returns:
-	//
-	// -1 if v < other
-	//  0 if v == other
-	//  1 if v > other
-	//
-	// If the values are not comparable, ErrIncomparable is returned.
-	Comp(other core.Any) (int, error)
-}
-
-// EqualityProvider asserts equality between two values.
-type EqualityProvider interface {
-	Equals(other core.Any) (bool, error)
-}
 
 // Nil represents the Value 'nil'.
 type Nil struct{}
@@ -116,7 +60,7 @@ func (i64 Int64) Comp(other core.Any) (int, error) {
 		}
 	}
 
-	return 0, ErrIncomparable
+	return 0, core.ErrIncomparable
 }
 
 func (i64 Int64) String() string { return strconv.Itoa(int(i64)) }
@@ -140,7 +84,7 @@ func (f64 Float64) Comp(other core.Any) (int, error) {
 		}
 	}
 
-	return 0, ErrIncomparable
+	return 0, core.ErrIncomparable
 }
 
 func (f64 Float64) String() string {
@@ -226,51 +170,6 @@ func (kw Keyword) Equals(other core.Any) (bool, error) {
 }
 
 func (kw Keyword) String() string { return fmt.Sprintf(":%s", string(kw)) }
-
-// Compare the value to another value. Returns:
-//
-//  0 if a == b (Same as b == a).
-//  1 if a > b.
-//  -1 if a < b.
-//
-// If the values are not comparable, ErrIncomparable is returned.
-func Compare(a, b core.Any) (int, error) {
-	if cmp, ok := a.(Comparable); ok {
-		return cmp.Comp(b)
-	}
-
-	if ep, ok := a.(EqualityProvider); ok {
-		eq, err := ep.Equals(b)
-		if eq || err != nil {
-			return 0, err
-		}
-	} else if ep, ok := b.(EqualityProvider); ok {
-		eq, err := ep.Equals(a)
-		if eq || err != nil {
-			return 0, err
-		}
-	}
-
-	return 0, ErrIncomparable
-}
-
-// Eq returns true if a == b.
-func Eq(a, b core.Any) (bool, error) {
-	aSeq, aOk := a.(Seq)
-	bSeq, bOk := b.(Seq)
-	if aOk && bOk {
-		return seqEq(aSeq, bSeq)
-	}
-
-	c, err := Compare(a, b)
-	if err != nil {
-		if err == ErrIncomparable {
-			return false, nil
-		}
-		return false, err
-	}
-	return c == 0, nil
-}
 
 // IsNil returns true if value is native go `nil` or `Nil{}`.
 func IsNil(v core.Any) bool {

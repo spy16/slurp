@@ -13,7 +13,7 @@ func TestCons(t *testing.T) {
 	table := []struct {
 		title   string
 		first   core.Any
-		rest    Seq
+		rest    core.Seq
 		items   []core.Any
 		wantSz  int
 		wantErr error

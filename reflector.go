@@ -52,7 +52,7 @@ func Value(v interface{}) core.Any {
 
 // Func converts the given Go func value to a slurp Invokable value. Panics
 // if the given value is not of Func kind.
-func Func(name string, v interface{}) builtin.Invokable {
+func Func(name string, v interface{}) core.Invokable {
 	rv := reflect.ValueOf(v)
 	rt := rv.Type()
 	if rt.Kind() != reflect.Func {
