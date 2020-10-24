@@ -12,11 +12,11 @@ import (
 
 // ErrParseSpecial is returned when parsing a special form invocation
 // fails due to malformed syntax.
-var ErrParseSpecial = errors.New("invalid sepcial form")
+var ErrParseSpecial = errors.New("invalid special form")
 
-func parseDo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	var de builtin.DoExpr
-	err := builtin.ForEach(args, func(item core.Any) (bool, error) {
+	err := core.ForEach(args, func(item core.Any) (bool, error) {
 		expr, err := a.Analyze(env, item)
 		if err != nil {
 			return true, err
@@ -30,7 +30,7 @@ func parseDo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error)
 	return de, nil
 }
 
-func parseIf(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+func parseIf(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func parseIf(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error)
 	}, nil
 }
 
-func parseQuote(a core.Analyzer, _ core.Env, args builtin.Seq) (core.Expr, error) {
+func parseQuote(a core.Analyzer, _ core.Env, args core.Seq) (core.Expr, error) {
 	if count, err := args.Count(); err != nil {
 		return nil, err
 	} else if count != 1 {
@@ -85,7 +85,7 @@ func parseQuote(a core.Analyzer, _ core.Env, args builtin.Seq) (core.Expr, error
 	return builtin.QuoteExpr{Form: first}, nil
 }
 
-func parseDef(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	e := core.Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
 
 	if args == nil {
@@ -131,7 +131,7 @@ func parseDef(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error
 	}, nil
 }
 
-func parseGo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+func parseGo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func parseGo(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error)
 
 // parseFn parses (fn name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseFn(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, error) {
+func parseFn(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func parseFn(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, erro
 
 // parseMacro parses (macro name? doc? (<params>*) <body>*) special form and
 // returns an Fn definition.
-func parseMacro(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, error) {
+func parseMacro(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
 	fn, err := parseFnDef(a, env, argSeq)
 	if err != nil {
 		return nil, err
@@ -178,14 +178,14 @@ func parseMacro(a core.Analyzer, env core.Env, argSeq builtin.Seq) (core.Expr, e
 	return builtin.ConstExpr{Const: *fn}, nil
 }
 
-func parseFnDef(a core.Analyzer, env core.Env, argSeq builtin.Seq) (*builtin.Fn, error) {
+func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, error) {
 	fn := builtin.Fn{}
 
 	cnt, err := argSeq.Count()
 	if err != nil {
 		return nil, err
 	} else if cnt < 1 {
-		return nil, fmt.Errorf("%w: got %d, want at-least 1", builtin.ErrArity, cnt)
+		return nil, fmt.Errorf("%w: got %d, want at-least 1", core.ErrArity, cnt)
 	}
 
 	args, err := toSlice(argSeq)
@@ -206,7 +206,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq builtin.Seq) (*builtin.Fn,
 
 	// TODO: add support for multi-arity parsing.
 
-	fnArgs, ok := args[i].(builtin.Seq)
+	fnArgs, ok := args[i].(core.Seq)
 	if !ok {
 		return nil, fmt.Errorf(
 			"expecting a list of symbols, got '%s'", reflect.TypeOf(args[i]))
@@ -215,7 +215,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq builtin.Seq) (*builtin.Fn,
 
 	f := builtin.Func{}
 	fnEnv := env.Child(fn.Name, nil)
-	err = builtin.ForEach(fnArgs, func(item core.Any) (bool, error) {
+	err = core.ForEach(fnArgs, func(item core.Any) (bool, error) {
 		sym, ok := item.(builtin.Symbol)
 		if !ok {
 			return true, fmt.Errorf(
@@ -249,9 +249,9 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq builtin.Seq) (*builtin.Fn,
 	return &fn, nil
 }
 
-func toSlice(seq builtin.Seq) ([]core.Any, error) {
+func toSlice(seq core.Seq) ([]core.Any, error) {
 	var sl []core.Any
-	err := builtin.ForEach(seq, func(item core.Any) (bool, error) {
+	err := core.ForEach(seq, func(item core.Any) (bool, error) {
 		sl = append(sl, item)
 		return false, nil
 	})

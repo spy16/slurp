@@ -15,13 +15,13 @@ func Test_parseDo(t *testing.T) {
 	table := []specialTest{
 		{
 			title: "NilArgs",
-			env:   builtin.New(nil),
+			env:   core.New(nil),
 			args:  nil,
 			want:  builtin.DoExpr{},
 		},
 		{
 			title: "SomeArgs",
-			env:   builtin.New(nil),
+			env:   core.New(nil),
 			args:  builtin.NewList(1, 2),
 			want: builtin.DoExpr{
 				Exprs: []core.Expr{
@@ -32,7 +32,7 @@ func Test_parseDo(t *testing.T) {
 		},
 		{
 			title:   "AnalyzeFail",
-			env:     builtin.New(nil),
+			env:     core.New(nil),
 			args:    builtin.NewList(1, builtin.NewList(builtin.Symbol("def"))),
 			want:    nil,
 			wantErr: ErrParseSpecial,
@@ -74,7 +74,7 @@ func Test_parseDef(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = builtin.New(nil)
+			tt.env = core.New(nil)
 			runSpecialTest(t, tt, parseDef)
 		})
 	}
@@ -83,7 +83,7 @@ func Test_parseDef(t *testing.T) {
 type specialTest struct {
 	title   string
 	env     core.Env
-	args    builtin.Seq
+	args    core.Seq
 	want    core.Expr
 	wantErr error
 }

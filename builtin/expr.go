@@ -50,7 +50,7 @@ func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 		val = Nil{}
 	}
 
-	if err := Root(env).Bind(de.Name, val); err != nil {
+	if err := core.Root(env).Bind(de.Name, val); err != nil {
 		return nil, err
 	}
 	return Symbol(de.Name), nil
@@ -106,7 +106,7 @@ type ResolveExpr struct{ Symbol Symbol }
 
 // Eval resolves the symbol in the given environment or its parent env
 // and returns the result. Returns ErrNotFound if the symbol was not
-// found in the entire heirarchy.
+// found in the entire hierarchy.
 func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
 	var v core.Any
 	var err error
@@ -156,7 +156,7 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 		return nil, err
 	}
 
-	fn, ok := val.(Invokable)
+	fn, ok := val.(core.Invokable)
 	if !ok {
 		return nil, core.Error{
 			Cause:   core.ErrNotInvokable,

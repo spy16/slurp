@@ -13,7 +13,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	t.Parallel()
 
 	hundredFunc := fakeFn{}
-	e := builtin.New(map[string]core.Any{
+	e := core.New(map[string]core.Any{
 		"foo":     builtin.Keyword("hello"),
 		"hundred": hundredFunc,
 	})
@@ -57,7 +57,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			ba := &builtin.Analyzer{
 				Specials: map[string]builtin.ParseSpecial{
-					"foo": func(a core.Analyzer, env core.Env, args builtin.Seq) (core.Expr, error) {
+					"foo": func(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 						return builtin.ConstExpr{Const: "foo"}, nil
 					},
 				},

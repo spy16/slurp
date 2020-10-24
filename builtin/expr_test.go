@@ -8,6 +8,8 @@ import (
 	"github.com/spy16/slurp/core"
 )
 
+var errUnknown = errors.New("failed")
+
 func TestConstExpr_Eval(t *testing.T) {
 	t.Parallel()
 	runExprTests(t, []exprTest{
@@ -79,14 +81,14 @@ func TestDefExpr_Eval(t *testing.T) {
 		{
 			title: "NoName",
 			expr: func() (core.Expr, core.Env) {
-				return DefExpr{}, New(nil)
+				return DefExpr{}, core.New(nil)
 			},
 			wantErr: core.ErrInvalidName,
 		},
 		{
 			title: "NilValue",
 			expr: func() (core.Expr, core.Env) {
-				return DefExpr{Name: "foo"}, New(nil)
+				return DefExpr{Name: "foo"}, core.New(nil)
 			},
 			want: Symbol("foo"),
 			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
@@ -101,7 +103,7 @@ func TestDefExpr_Eval(t *testing.T) {
 				return DefExpr{
 					Name:  "foo",
 					Value: fakeExpr{Err: errUnknown},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
@@ -111,7 +113,7 @@ func TestDefExpr_Eval(t *testing.T) {
 				return DefExpr{
 					Name:  "foo",
 					Value: ConstExpr{Const: 10},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			want: Symbol("foo"),
 			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
@@ -130,7 +132,7 @@ func TestIfExpr_Eval(t *testing.T) {
 		{
 			title: "EmptyIf",
 			expr: func() (core.Expr, core.Env) {
-				return IfExpr{}, New(nil)
+				return IfExpr{}, core.New(nil)
 			},
 			want: Nil{},
 		},
@@ -139,7 +141,7 @@ func TestIfExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: true},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			want: Nil{},
 		},
@@ -148,7 +150,7 @@ func TestIfExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: ConstExpr{Const: false},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			want: Nil{},
 		},
@@ -158,7 +160,7 @@ func TestIfExpr_Eval(t *testing.T) {
 				return IfExpr{
 					Test: ConstExpr{Const: true},
 					Then: ConstExpr{Const: "hello"},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			want: "hello",
 		},
@@ -167,7 +169,7 @@ func TestIfExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return IfExpr{
 					Test: fakeExpr{Err: errUnknown},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
@@ -177,7 +179,7 @@ func TestIfExpr_Eval(t *testing.T) {
 				return IfExpr{
 					Test: ConstExpr{Const: false},
 					Else: ConstExpr{Const: "else-case"},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			want: "else-case",
 		},
@@ -192,7 +194,7 @@ func TestGoExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return &GoExpr{
 					Form: fakeExpr{Err: errUnknown},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: nil,
 		},
@@ -201,7 +203,7 @@ func TestGoExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return &GoExpr{
 					Form: fakeExpr{Res: 100},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: nil,
 		},
@@ -216,7 +218,7 @@ func TestInvokeExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return &InvokeExpr{
 					Target: fakeExpr{Err: errUnknown},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},
@@ -225,14 +227,14 @@ func TestInvokeExpr_Eval(t *testing.T) {
 			expr: func() (core.Expr, core.Env) {
 				return &InvokeExpr{
 					Target: ConstExpr{Const: 10},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: core.ErrNotInvokable,
 		},
 		{
 			title: "InvokeWithArgs",
 			expr: func() (core.Expr, core.Env) {
-				e := New(nil)
+				e := core.New(nil)
 				return &InvokeExpr{
 					Name: "foo",
 					Target: ConstExpr{Const: fakeInvokable(func(args ...core.Any) (core.Any, error) {
@@ -253,7 +255,7 @@ func TestInvokeExpr_Eval(t *testing.T) {
 					Args: []core.Expr{
 						fakeExpr{Err: errUnknown},
 					},
-				}, New(nil)
+				}, core.New(nil)
 			},
 			wantErr: errUnknown,
 		},

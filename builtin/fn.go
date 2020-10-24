@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -9,10 +8,7 @@ import (
 	"github.com/spy16/slurp/core"
 )
 
-var _ Invokable = (*Fn)(nil)
-
-// ErrArity is returned when Fn is invoked with wrong number of arguments.
-var ErrArity = errors.New("wrong number of arguments")
+var _ core.Invokable = (*Fn)(nil)
 
 // Fn represents a multi-arity function definition. Fn implements
 // Invokable.
@@ -90,7 +86,7 @@ func (fn Fn) selectFunc(args []core.Any) (Func, error) {
 	}
 
 	return Func{}, fmt.Errorf(
-		"%w (%d) to '%s'", ErrArity, len(args), fn.Name)
+		"%w (%d) to '%s'", core.ErrArity, len(args), fn.Name)
 }
 
 // Func represents a method of specific arity in Fn.
@@ -121,7 +117,7 @@ func (f *Func) compare(other Func) (bool, error) {
 		return false, nil
 	}
 
-	bodyEq, err := Eq(f.Body, other.Body)
+	bodyEq, err := core.Eq(f.Body, other.Body)
 	if err != nil {
 		return false, err
 	}
