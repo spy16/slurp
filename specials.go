@@ -179,6 +179,10 @@ func parseMacro(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, erro
 }
 
 func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, error) {
+	if argSeq == nil {
+		return nil, errors.New("nil argument sequence")
+	}
+
 	fn := builtin.Fn{}
 
 	cnt, err := argSeq.Count()
@@ -188,7 +192,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 		return nil, fmt.Errorf("%w: got %d, want at-least 1", core.ErrArity, cnt)
 	}
 
-	args, err := toSlice(argSeq)
+	args, err := core.ToSlice(argSeq)
 	if err != nil {
 		return nil, err
 	}
@@ -247,13 +251,4 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 	fn.Funcs = append(fn.Funcs, f)
 
 	return &fn, nil
-}
-
-func toSlice(seq core.Seq) ([]core.Any, error) {
-	var sl []core.Any
-	err := core.ForEach(seq, func(item core.Any) (bool, error) {
-		sl = append(sl, item)
-		return false, nil
-	})
-	return sl, err
 }

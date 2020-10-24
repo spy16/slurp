@@ -21,6 +21,16 @@ type Seq interface {
 	Conj(items ...Any) (Seq, error)
 }
 
+// ToSlice converts the given sequence into a slice.
+func ToSlice(seq Seq) ([]Any, error) {
+	var sl []Any
+	err := ForEach(seq, func(item Any) (bool, error) {
+		sl = append(sl, item)
+		return false, nil
+	})
+	return sl, err
+}
+
 // ForEach reads from the sequence and calls the given function for each item.
 // Function can return true to stop the iteration.
 func ForEach(seq Seq, call func(item Any) (bool, error)) (err error) {

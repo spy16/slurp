@@ -1,6 +1,6 @@
 VERSION="`git describe --abbrev=0 --tags`"
 COMMIT="`git rev-list -1 --abbrev-commit HEAD`"
-TEST_PACKAGES=$(shell go list ./... | grep -v /examples/)
+TEST_PACKAGES=$(shell go list ./... | grep -v /examples/ | grep -v /expt | grep -v /repl)
 
 all: clean fmt build test
 

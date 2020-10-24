@@ -80,6 +80,9 @@ func Compare(a, b Any) (int, error) {
 
 // Eq returns true if a == b.
 func Eq(a, b Any) (bool, error) {
+	if a == nil && b == nil {
+		return true, nil
+	}
 	aSeq, aOk := a.(Seq)
 	bSeq, bOk := b.(Seq)
 	if aOk && bOk {

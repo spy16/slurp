@@ -120,7 +120,7 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 		return nil, ErrNoExpand
 	}
 
-	sl, err := toSlice(lst)
+	sl, err := core.ToSlice(lst)
 	if err != nil {
 		return nil, err
 	}
@@ -130,13 +130,4 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 		return nil, err
 	}
 	return res, nil
-}
-
-func toSlice(seq core.Seq) ([]core.Any, error) {
-	var sl []core.Any
-	err := core.ForEach(seq, func(item core.Any) (bool, error) {
-		sl = append(sl, item)
-		return false, nil
-	})
-	return sl, err
 }
