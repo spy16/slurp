@@ -12,11 +12,7 @@ var (
 // Cons returns a new seq with `v` added as the first and `seq` as the rest.
 // seq can be nil as well.
 func Cons(v core.Any, seq core.Seq) (core.Seq, error) {
-	newSeq := &LinkedList{
-		first: v,
-		rest:  seq,
-		count: 1,
-	}
+	newSeq := &LinkedList{first: v, rest: seq, count: 1}
 
 	if seq != nil {
 		cnt, err := seq.Count()
@@ -58,16 +54,14 @@ func (ll *LinkedList) SExpr() (string, error) {
 	if ll == nil {
 		return "()", nil
 	}
-
 	return core.SeqString(ll, "(", ")", " ")
 }
 
 // Conj returns a new list with all the items added at the head of the list.
 func (ll *LinkedList) Conj(items ...core.Any) (res core.Seq, err error) {
+	res = ll
 	if ll == nil {
 		res = &LinkedList{}
-	} else {
-		res = ll
 	}
 
 	for _, item := range items {
@@ -76,7 +70,7 @@ func (ll *LinkedList) Conj(items ...core.Any) (res core.Seq, err error) {
 		}
 	}
 
-	return
+	return res, err
 }
 
 // First returns the head or first item of the list.
@@ -100,6 +94,5 @@ func (ll *LinkedList) Count() (int, error) {
 	if ll == nil {
 		return 0, nil
 	}
-
 	return ll.count, nil
 }

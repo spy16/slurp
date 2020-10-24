@@ -40,7 +40,7 @@ func ForEach(seq Seq, call func(item Any) (bool, error)) (err error) {
 		}
 	}
 
-	return
+	return err
 }
 
 // SeqString returns a string representation for the sequence with given prefix
@@ -49,8 +49,8 @@ func SeqString(seq Seq, begin, end, sep string) (string, error) {
 	var b strings.Builder
 	b.WriteString(begin)
 	err := ForEach(seq, func(item Any) (bool, error) {
-		if sxpr, ok := item.(SExpressable); ok {
-			s, err := sxpr.SExpr()
+		if se, ok := item.(SExpressable); ok {
+			s, err := se.SExpr()
 			if err != nil {
 				return false, err
 			}

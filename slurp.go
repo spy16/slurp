@@ -1,3 +1,5 @@
+// Package slurp provides Interpreter that composes builtin implementations of
+// Env, Analyzer and Reader that supports a working LISP dialect.
 package slurp
 
 import (

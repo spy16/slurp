@@ -1,3 +1,5 @@
+// Package core defines the core contracts of slurp. Core also defines primitives
+// that work directly with the core types.
 package core
 
 import (
