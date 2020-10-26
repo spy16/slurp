@@ -219,6 +219,7 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 
 	f := builtin.Func{}
 	fnEnv := env.Child(fn.Name, nil)
+	argSet := map[string]struct{}{}
 	err = core.ForEach(fnArgs, func(item core.Any) (bool, error) {
 		sym, ok := item.(builtin.Symbol)
 		if !ok {
@@ -226,6 +227,10 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 				"expecting parameter to be a symbol, got '%s'",
 				reflect.TypeOf(item))
 		}
+		if _, found := argSet[string(sym)]; found {
+			return true, fmt.Errorf("duplicate arg name '%s'", sym)
+		}
+		argSet[string(sym)] = struct{}{}
 		f.Params = append(f.Params, string(sym))
 
 		if err := fnEnv.Bind(string(sym), nil); err != nil {
@@ -234,6 +239,9 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 
 		return false, nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	// wrap body in (do <expr>*) and analyze.
 	bodyExprs, err := builtin.Cons(builtin.Symbol("do"), builtin.NewList(args[i:]...))
