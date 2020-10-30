@@ -20,10 +20,7 @@ func (v Vector) SExpr() (string, error) {
 
 // Conj returns a new vector with all the items added at the tail of the vector.
 func (v Vector) Conj(items ...core.Any) (core.Seq, error) {
-	vv := make([]core.Any, len(v)+len(items))
-	copy(vv, v)
-	copy(vv[len(v):], items)
-	return Vector(vv), nil
+	return Vector(append(v, items...)), nil
 }
 
 // First returns the head or first item of the vector.
