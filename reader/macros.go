@@ -265,14 +265,14 @@ func quoteFormReader(expandFunc string) Macro {
 	}
 }
 
-// readVector implements the reader macro for reading vector from source.
-func readVector(rd *Reader, _ rune) (core.Any, error) {
-	const vecEnd = ']'
+// // readVector implements the reader macro for reading vector from source.
+// func readVector(rd *Reader, _ rune) (core.Any, error) {
+// 	const vecEnd = ']'
 
-	// preallocate for performance on small vectors
-	v := make(builtin.Vector, 0, 32)
-	return v, rd.Container(vecEnd, "Vector", func(c core.Any) error {
-		v = append(v, c)
-		return nil
-	})
-}
+// 	// preallocate for performance on small vectors
+// 	v := make(builtin.Vector, 0, 32)
+// 	return v, rd.Container(vecEnd, "Vector", func(c core.Any) error {
+// 		v = append(v, c)
+// 		return nil
+// 	})
+// }

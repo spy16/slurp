@@ -21,6 +21,13 @@ type Seq interface {
 	Conj(items ...Any) (Seq, error)
 }
 
+// Seqable types can be represented as a sequence.
+type Seqable interface {
+	// Return a sequence representation of the underlying type.  Note that semantics
+	// for Conj() are implementation-dependent.
+	Seq() (Seq, error)
+}
+
 // ToSlice converts the given sequence into a slice.
 func ToSlice(seq Seq) ([]Any, error) {
 	var sl []Any

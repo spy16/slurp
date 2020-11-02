@@ -2,10 +2,10 @@ package builtin
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/spy16/slurp/core"
+	"github.com/stretchr/testify/assert"
 )
 
 var errUnknown = errors.New("failed")
@@ -93,8 +93,8 @@ func TestDefExpr_Eval(t *testing.T) {
 			want: Symbol("foo"),
 			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
 				v, err := env.Resolve("foo")
-				assert(t, err == nil, "unexpected error: %#v", err)
-				assert(t, v == Nil{}, "expecting Nil{}, got %#v", v)
+				assert.NoError(t, err)
+				assert.Equal(t, Nil{}, v)
 			},
 		},
 		{
@@ -118,8 +118,8 @@ func TestDefExpr_Eval(t *testing.T) {
 			want: Symbol("foo"),
 			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
 				v, err := env.Resolve("foo")
-				assert(t, err == nil, "unexpected error: %#v", err)
-				assert(t, v == 10, "expecting 10, got %#v", v)
+				assert.NoError(t, err)
+				assert.Equal(t, 10, v)
 			},
 		},
 	})
@@ -268,13 +268,13 @@ func runExprTests(t *testing.T, table []exprTest) {
 			expr, env := tt.expr()
 			got, err := expr.Eval(env)
 			if tt.wantErr != nil {
-				assert(t, errors.Is(err, tt.wantErr),
+				assert.True(t, errors.Is(err, tt.wantErr),
 					"wantErr=%#v\ngotErr=%#v", tt.wantErr, got)
-				assert(t, got == nil, "expected nil, got %#v", got)
+				assert.Nil(t, got,
+					"failed call to Eval returned non-nil value")
 			} else {
-				assert(t, err == nil, "unexpected err: %#v", err)
-				assert(t, reflect.DeepEqual(tt.want, got),
-					"want=%#v\n%#v", tt.want, got)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 
 			if tt.assert != nil {

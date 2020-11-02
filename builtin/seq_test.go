@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/spy16/slurp/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCons(t *testing.T) {
@@ -42,13 +43,14 @@ func TestCons(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			seq, err := Cons(tt.first, tt.rest)
 			if tt.wantErr != nil {
-				assert(t, errors.Is(err, tt.wantErr),
+				assert.True(t, errors.Is(err, tt.wantErr),
 					"wantErr=%#v\ngot=%#v", tt.wantErr, err)
-				assert(t, seq == nil, "want=nil got=%#v", seq)
+				assert.Nil(t, seq,
+					"failed call to Cons() returned non-nil value")
 			} else {
 				count, err := seq.Count()
-				assert(t, err == nil, "unexpected err: %#v", err)
-				assert(t, count == tt.wantSz, "want=%d got=%d", tt.wantSz, count)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantSz, count)
 			}
 		})
 	}
