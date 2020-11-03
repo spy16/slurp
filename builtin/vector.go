@@ -6,7 +6,10 @@ import (
 	"github.com/spy16/slurp/core"
 )
 
-// var _ core.Vector = (*Vector)(nil)
+var (
+	_ core.Vector = (*PersistentVector)(nil)
+	_ core.Vector = (*transientVector)(nil)
+)
 
 const (
 	bits  = 5 // number of bits needed to represent the range (0 32].
@@ -27,6 +30,34 @@ var (
 type PersistentVector struct {
 	cnt, shift int
 	root, tail node
+}
+
+// NewVector builds a PersistentVector efficiently.
+func NewVector(items ...core.Any) core.Vector {
+	vec := EmptyVector.asTransient()
+	for _, val := range items {
+		_ = vec.Conj(val)
+	}
+	return vec.persistent()
+}
+
+// SeqToVector efficiently builds a PersistentVector from a Seq.
+func SeqToVector(seq core.Seq) (core.Vector, error) {
+	vec := EmptyVector.asTransient()
+	err := core.ForEach(seq, func(val core.Any) (bool, error) {
+		_ = vec.Conj(val)
+		return false, nil
+	})
+	return vec.persistent(), err
+}
+
+func (v PersistentVector) asTransient() *transientVector {
+	return &transientVector{
+		cnt:   v.cnt,
+		shift: v.shift,
+		root:  v.root.clone(),
+		tail:  v.tail.clone(),
+	}
 }
 
 // Count returns the number of elements contained in the Vector.
@@ -95,7 +126,7 @@ func (v PersistentVector) Assoc(i int, val core.Any) (core.Vector, error) {
 func (v PersistentVector) assoc(i int, val core.Any) (PersistentVector, error) {
 	if i >= 0 && i < v.cnt {
 		if i >= v.tailoff() {
-			newTail := v.tail.copy()
+			newTail := v.tail.clone()
 			newTail.array[i&mask] = val
 			return PersistentVector{
 				cnt:   v.cnt,
@@ -138,7 +169,7 @@ func (v PersistentVector) Cons(val core.Any) core.Vector { return v.cons(val) }
 func (v PersistentVector) cons(val core.Any) PersistentVector {
 	// room in tail?
 	if v.cnt-v.tailoff() < 32 {
-		newTail := v.tail.copy()
+		newTail := v.tail.clone()
 		newTail.len++
 		newTail.array[v.tail.len] = val
 
@@ -152,7 +183,7 @@ func (v PersistentVector) cons(val core.Any) PersistentVector {
 
 	// full tail; push into trie
 	var newRoot node
-	tailNode := v.tail.copy()
+	tailNode := v.tail.clone()
 	newShift := v.shift
 
 	// overflow root?
@@ -188,7 +219,7 @@ func (v PersistentVector) pushTail(level int, parent, tailNode node) node {
 	//return  nodeToInsert placed in copy of parent
 
 	subidx := ((v.cnt - 1) >> level) & mask
-	ret := parent.copy()
+	ret := parent.clone()
 
 	var nodeToInsert node
 
@@ -228,12 +259,19 @@ func newNode(vs ...interface{}) (n node) {
 	return
 }
 
-func (n node) copy() (nn node) {
+func (n node) clone() (nn node) {
 	nn.len = n.len
 	for i, v := range n.array {
 		nn.array[i] = v
 	}
 	return nn
+}
+
+func (n node) clear() {
+	n.len = 0
+	for i := range n.array {
+		n.array[i] = nil
+	}
 }
 
 type chunkedSeq struct {
@@ -286,4 +324,123 @@ func (cs chunkedSeq) Conj(items ...core.Any) (_ core.Seq, err error) {
 	}
 
 	return newChunkedSeq(cs.vec, cs.i, cs.offset)
+}
+
+type transientVector PersistentVector
+
+// N.B.:  transientVector must not be modified after call to persistent()
+func (t transientVector) persistent() PersistentVector { return PersistentVector(t) }
+
+func (t transientVector) tailoff() int { return PersistentVector(t).tailoff() }
+
+func (t transientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
+
+func (t transientVector) Count() (int, error) { return t.cnt, nil }
+
+func (t transientVector) Seq() (core.Seq, error) { return PersistentVector(t).Seq() }
+
+func (t *transientVector) Conj(val core.Any) *transientVector {
+	i := t.cnt
+
+	// room in tail?
+	if i-t.tailoff() < 32 {
+		t.tail.array[i&mask] = val
+		t.tail.len++
+		t.cnt++
+		return t
+	}
+
+	// full tail; push into trie
+	var newRoot node
+	tailNode := t.tail.clone()
+
+	t.tail.clear()
+	t.tail.array[0] = val
+	t.tail.len++
+
+	newShift := t.shift
+
+	// overflow root?
+	if (t.cnt >> bits) > (1 << t.shift) {
+		newRoot.len += 2
+		newRoot.array[0] = t.root
+		newRoot.array[1] = newPath(t.shift, tailNode)
+		newShift += 5
+	} else {
+		newRoot = t.pushTail(t.shift, t.root, tailNode)
+	}
+
+	t.root = newRoot
+	t.shift = newShift
+	t.cnt++
+	return t
+}
+
+func (t *transientVector) pushTail(level int, parent, tailNode node) node {
+	//if parent is leaf, insert node,
+	// else does it map to an existing child? -> nodeToInsert = pushNode one more level
+	// else alloc new path
+	//return  nodeToInsert placed in parent
+
+	subidx := ((t.cnt - 1) >> level) & mask
+	ret := parent // mutable; don't clone
+	var nodeToInsert node
+	if level == bits {
+		nodeToInsert = tailNode
+	} else {
+		if child := parent.array[subidx]; child != nil {
+			nodeToInsert = t.pushTail(level-bits, child.(node), tailNode) // TODO: unsafe.Pointer
+		} else {
+			nodeToInsert = newPath(level-bits, tailNode)
+		}
+	}
+
+	ret.array[subidx] = nodeToInsert
+	return ret
+}
+
+func (t *transientVector) nodeFor(i int) (node, error) {
+	return (*PersistentVector)(t).nodeFor(i)
+}
+
+func (t *transientVector) Assoc(i int, val core.Any) (core.Vector, error) {
+	return t.assoc(i, val)
+}
+
+func (t *transientVector) assoc(i int, val core.Any) (*transientVector, error) {
+	if i >= 0 && i < t.cnt {
+		if i >= t.tailoff() {
+			t.tail.array[i&mask] = val
+			return t, nil
+		}
+
+		t.root = t.doAssoc(t.shift, t.root, i, val)
+		return t, nil
+	}
+
+	if i == t.cnt {
+		return t.Conj(val), nil
+	}
+
+	return nil, ErrIndexOutOfBounds
+}
+
+func (t *transientVector) doAssoc(level int, n node, i int, val core.Any) node {
+	ret := n
+	if level == 0 {
+		ret.array[i&mask] = val
+	} else {
+		subidx := (i >> level) & mask
+		ret.array[subidx] = t.doAssoc(level-5, n.array[subidx].(node), i, val)
+	}
+
+	return ret
+}
+
+func (t transientVector) EntryAt(i int) (core.Any, error) {
+	return PersistentVector(t).EntryAt(i)
+}
+
+func (t *transientVector) Pop() (core.Vector, error) {
+	panic("function NOT IMPLEMENTED")
 }

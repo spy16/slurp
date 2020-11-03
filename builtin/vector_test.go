@@ -44,10 +44,12 @@ func TestEmptyVector(t *testing.T) {
 	})
 }
 
-func TestVector(t *testing.T) {
+func TestPersistentVector(t *testing.T) {
 	t.Run("SExpr", func(t *testing.T) {
-		// TODO: ...
-		t.Skip("TransientVector NOT IMPLEMENTED.  Skipping...")
+		t.Parallel()
+
+		vec := NewVector(Int64(0), Keyword("keyword"), String("string"))
+		testSExpr(t, vec, "[0 :keyword \"string\"]")
 	})
 
 	t.Run("Assoc", func(t *testing.T) {
