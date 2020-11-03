@@ -33,7 +33,7 @@ type PersistentVector struct {
 }
 
 // NewVector builds a PersistentVector efficiently.
-func NewVector(items ...core.Any) core.Vector {
+func NewVector(items ...core.Any) PersistentVector {
 	vec := EmptyVector.asTransient()
 	for _, val := range items {
 		_ = vec.Conj(val)
@@ -42,7 +42,7 @@ func NewVector(items ...core.Any) core.Vector {
 }
 
 // SeqToVector efficiently builds a PersistentVector from a Seq.
-func SeqToVector(seq core.Seq) (core.Vector, error) {
+func SeqToVector(seq core.Seq) (PersistentVector, error) {
 	vec := EmptyVector.asTransient()
 	err := core.ForEach(seq, func(val core.Any) (bool, error) {
 		_ = vec.Conj(val)
@@ -332,8 +332,6 @@ type transientVector PersistentVector
 func (t transientVector) persistent() PersistentVector { return PersistentVector(t) }
 
 func (t transientVector) tailoff() int { return PersistentVector(t).tailoff() }
-
-func (t transientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
 
 func (t transientVector) Count() (int, error) { return t.cnt, nil }
 

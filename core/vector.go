@@ -3,7 +3,6 @@ package core
 // Vector is an ordered collection providing fast random access.
 type Vector interface {
 	Seqable
-	SExpressable
 
 	// Count returns the number of elements contained in the Vector.
 	Count() (int, error)
