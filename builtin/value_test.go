@@ -59,9 +59,3 @@ func testComp(t *testing.T, v core.Comparable, other core.Any, want int, wantErr
 
 	assert.Equal(t, want, got)
 }
-
-// func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
-// 	if !cond {
-// 		t.Errorf(msg, args...)
-// 	}
-// }
