@@ -22,19 +22,15 @@ func TestVectorIsHashable(t *testing.T) {
 	m[EmptyVector] = struct{}{}
 }
 
-func TestVectorSExpr(t *testing.T) {
-	t.Parallel()
-
-	testSExpr(t, EmptyVector, "[]")
-	testSExpr(t, NewVector(Int64(0), Keyword("keyword"), String("string")),
-		"[0 :keyword \"string\"]")
-}
-
 func TestEmptyVector(t *testing.T) {
 	t.Parallel()
 
 	require.NotZero(t, EmptyVector,
 		"zero-value empty vector is invalid (shift is missing)")
+
+	t.Run("SExpr", func(t *testing.T) {
+		testSExpr(t, EmptyVector, "[]")
+	})
 
 	t.Run("Count", func(t *testing.T) {
 		t.Parallel()
@@ -57,6 +53,13 @@ func TestPersistentVector(t *testing.T) {
 	t.Parallel()
 
 	var v core.Vector = EmptyVector
+
+	t.Run("SExpr", func(t *testing.T) {
+		// TODO:  rewrite using NewVector when transientVector is debugged
+
+		vec := EmptyVector.Cons(Int64(0), Keyword("keyword"), String("string"))
+		testSExpr(t, vec.(core.SExpressable), "[0 :keyword \"string\"]")
+	})
 
 	t.Run("Append", func(t *testing.T) {
 		// N.B.:  do not run in parallel.  `v` must be constructed by prior tests.
@@ -157,6 +160,7 @@ func TestTransientVector(t *testing.T) {
 	}
 
 	t.Run("NewTransientVector", func(t *testing.T) {
+		t.Parallel()
 
 		v := newTransientVector(as...)
 		assert.NotNil(t, v)
@@ -167,7 +171,14 @@ func TestTransientVector(t *testing.T) {
 
 	})
 
+	t.Run("SExpr", func(t *testing.T) {
+		vec := newTransientVector(Int64(0), Keyword("keyword"), String("string"))
+		testSExpr(t, vec, "[0 :keyword \"string\"]")
+	})
+
 	t.Run("Count", func(t *testing.T) {
+		t.Parallel()
+
 		v := newTransientVector(as...)
 
 		cnt, err := v.Count()
@@ -176,6 +187,8 @@ func TestTransientVector(t *testing.T) {
 	})
 
 	t.Run("Append", func(t *testing.T) {
+		t.Parallel()
+
 		v := EmptyVector.asTransient()
 
 		for i := 0; i < size; i++ {
@@ -206,6 +219,8 @@ func TestTransientVector(t *testing.T) {
 	})
 
 	t.Run("Invariants", func(t *testing.T) {
+		t.Parallel()
+
 		v := EmptyVector.asTransient()
 		v.Conj(Nil{})
 

@@ -160,7 +160,12 @@ func (v PersistentVector) doAssoc(level int, n node, i int, val core.Any) node {
 }
 
 // Cons appends a value to the Vector.
-func (v PersistentVector) Cons(val core.Any) core.Vector { return v.cons(val) }
+func (v PersistentVector) Cons(vs ...core.Any) core.Vector {
+	for _, val := range vs {
+		v = v.cons(val)
+	}
+	return v
+}
 
 func (v PersistentVector) cons(val core.Any) PersistentVector {
 	// room in tail?
@@ -392,6 +397,8 @@ func newTransientVector(items ...core.Any) *transientVector {
 func (t transientVector) persistent() PersistentVector { return PersistentVector(t) }
 
 func (t transientVector) tailoff() int { return PersistentVector(t).tailoff() }
+
+func (t transientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
 
 func (t transientVector) Count() (int, error) { return t.cnt, nil }
 
