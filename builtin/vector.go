@@ -34,11 +34,7 @@ type PersistentVector struct {
 
 // NewVector builds a PersistentVector efficiently.
 func NewVector(items ...core.Any) PersistentVector {
-	vec := EmptyVector.asTransient()
-	for _, val := range items {
-		_ = vec.Conj(val)
-	}
-	return vec.persistent()
+	return newTransientVector(items...).persistent()
 }
 
 // SeqToVector efficiently builds a PersistentVector from a Seq.
@@ -239,7 +235,66 @@ func (v PersistentVector) pushTail(level int, parent, tailNode node) node {
 
 // Pop returns a copy of the Vector without its last element.
 func (v PersistentVector) Pop() (core.Vector, error) {
-	panic("PersistentVector.Pop() NOT IMPLEMENTED")
+	if v.cnt == 0 {
+		return nil, errors.New("cannot pop from empty vector")
+	}
+
+	if v.cnt == 1 {
+		return EmptyVector, nil
+	}
+
+	// len(tail) > 1 ?
+	if v.cnt-v.tailoff() > 1 {
+		newTail := node{len: v.tail.len - 1}
+		copy(newTail.array[:newTail.len], v.tail.array[:])
+
+		return PersistentVector{
+			cnt:   v.cnt - 1,
+			shift: v.shift,
+			root:  v.root,
+			tail:  newTail,
+		}, nil
+	}
+
+	newTail, err := v.nodeFor(v.cnt - 2)
+	if err != nil {
+		return nil, err
+	}
+
+	newRoot := v.popTail(v.shift, v.root)
+	newShift := v.shift
+	if v.shift > bits && newRoot.array[1] == nil {
+		newRoot = newRoot.array[0].(node) // TODO:  unsafe.Pointer
+		newShift -= bits
+	}
+
+	return PersistentVector{
+		cnt:   v.cnt - 1,
+		shift: newShift,
+		root:  newRoot,
+		tail:  newTail,
+	}, nil
+}
+
+func (v PersistentVector) popTail(level int, n node) node {
+	subidx := ((v.cnt - 2) >> level) & mask
+	if level > bits {
+		newChild := v.popTail(level-bits, n.array[subidx].(node)) // TODO: unsafe.Pointer
+		if newChild.isZero() && subidx == 0 {
+			return node{}
+		}
+
+		ret := n.clone()
+		ret.array[subidx] = newChild
+		// ret.len++
+		return ret
+	} else if subidx == 0 {
+		return node{}
+	}
+
+	ret := n.clone()
+	ret.array[subidx] = node{}
+	return ret
 }
 
 // Seq returns a sequence representation of the underlying Vector.
@@ -259,19 +314,14 @@ func newNode(vs ...interface{}) (n node) {
 	return
 }
 
+func (n node) isZero() bool { return n.len == 0 }
+
 func (n node) clone() (nn node) {
 	nn.len = n.len
 	for i, v := range n.array {
 		nn.array[i] = v
 	}
 	return nn
-}
-
-func (n node) clear() {
-	n.len = 0
-	for i := range n.array {
-		n.array[i] = nil
-	}
 }
 
 type chunkedSeq struct {
@@ -326,7 +376,17 @@ func (cs chunkedSeq) Conj(items ...core.Any) (_ core.Seq, err error) {
 	return newChunkedSeq(cs.vec, cs.i, cs.offset)
 }
 
+// TransientVector is used to efficiently build a PersistentVector using the Conj method.
+// It minimizes memory copying.
 type transientVector PersistentVector
+
+func newTransientVector(items ...core.Any) *transientVector {
+	vec := EmptyVector.asTransient()
+	for _, val := range items {
+		_ = vec.Conj(val)
+	}
+	return vec
+}
 
 // N.B.:  transientVector must not be modified after call to persistent()
 func (t transientVector) persistent() PersistentVector { return PersistentVector(t) }
@@ -338,12 +398,10 @@ func (t transientVector) Count() (int, error) { return t.cnt, nil }
 func (t transientVector) Seq() (core.Seq, error) { return PersistentVector(t).Seq() }
 
 func (t *transientVector) Conj(val core.Any) *transientVector {
-	i := t.cnt
-
 	// room in tail?
-	if i-t.tailoff() < 32 {
-		t.tail.array[i&mask] = val
-		t.tail.len++
+	if t.cnt-t.tailoff() < 32 {
+		t.tail.array[t.cnt&mask] = val
+		// t.tail.len++
 		t.cnt++
 		return t
 	}
@@ -351,11 +409,7 @@ func (t *transientVector) Conj(val core.Any) *transientVector {
 	// full tail; push into trie
 	var newRoot node
 	tailNode := t.tail.clone()
-
-	t.tail.clear()
-	t.tail.array[0] = val
-	t.tail.len++
-
+	t.tail = newNode(val)
 	newShift := t.shift
 
 	// overflow root?
@@ -441,4 +495,32 @@ func (t transientVector) EntryAt(i int) (core.Any, error) {
 
 func (t *transientVector) Pop() (core.Vector, error) {
 	panic("function NOT IMPLEMENTED")
+}
+
+// VectorBuilder is used to efficiently build a PersistentVector using the Conj method.
+// It minimizes memory copying. The zero value is ready to use.  Do not copy a
+// VectorBuilder after first use.
+type VectorBuilder struct {
+	persisted bool
+	*transientVector
+}
+
+// Conj appends a value to the end of the Vector.
+func (v *VectorBuilder) Conj(item core.Any) {
+	if v.persisted == true {
+		panic("vector already persisted")
+	}
+
+	if v.transientVector == nil {
+		v.transientVector = EmptyVector.asTransient()
+	}
+
+	_ = v.transientVector.Conj(item)
+}
+
+// Vector returns the constructed vector.  VectorBuilder must not be used after a call
+// to Vector().
+func (v *VectorBuilder) Vector() PersistentVector {
+	v.persisted = true
+	return v.persistent()
 }
