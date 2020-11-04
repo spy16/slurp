@@ -55,10 +55,8 @@ func TestPersistentVector(t *testing.T) {
 	var v core.Vector = EmptyVector
 
 	t.Run("SExpr", func(t *testing.T) {
-		// TODO:  rewrite using NewVector when transientVector is debugged
-
-		vec := EmptyVector.Cons(Int64(0), Keyword("keyword"), String("string"))
-		testSExpr(t, vec.(core.SExpressable), "[0 :keyword \"string\"]")
+		testSExpr(t, NewVector(Int64(0), Keyword("keyword"), String("string")),
+			"[0 :keyword \"string\"]")
 	})
 
 	t.Run("Append", func(t *testing.T) {

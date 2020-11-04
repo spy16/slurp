@@ -408,7 +408,7 @@ func (t *transientVector) Conj(val core.Any) *transientVector {
 	// room in tail?
 	if t.cnt-t.tailoff() < 32 {
 		t.tail.array[t.cnt&mask] = val
-		// t.tail.len++
+		t.tail.len++
 		t.cnt++
 		return t
 	}
