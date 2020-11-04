@@ -23,8 +23,7 @@ type Seq interface {
 
 // Seqable types can be represented as a sequence.
 type Seqable interface {
-	// Return a sequence representation of the underlying type.  Note that semantics
-	// for Conj() are implementation-dependent.
+	// Return a sequence representation of the underlying type.
 	Seq() (Seq, error)
 }
 

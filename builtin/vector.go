@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/spy16/slurp/core"
 )
@@ -22,14 +23,20 @@ var (
 	ErrIndexOutOfBounds = errors.New("index out of bounds")
 
 	// EmptyVector is the zero-value PersistentVector
-	EmptyVector = PersistentVector{shift: bits}
+	EmptyVector = PersistentVector{
+		shift: bits,
+		root:  emptyNode,
+		tail:  emptyNode,
+	}
+
+	emptyNode = new(node)
 )
 
 // PersistentVector is an immutable core.Vector implementation with O(1) lookup,
 // insertion, appending, and deletion.
 type PersistentVector struct {
 	cnt, shift int
-	root, tail node
+	root, tail *node
 }
 
 // NewVector builds a PersistentVector efficiently.
@@ -41,7 +48,7 @@ func NewVector(items ...core.Any) PersistentVector {
 func SeqToVector(seq core.Seq) (PersistentVector, error) {
 	vec := EmptyVector.asTransient()
 	err := core.ForEach(seq, func(val core.Any) (bool, error) {
-		_ = vec.Conj(val)
+		_, _ = vec.Conj(val)
 		return false, nil
 	})
 	return vec.persistent(), err
@@ -65,11 +72,7 @@ func (v PersistentVector) SExpr() (string, error) {
 		return "[]", nil
 	}
 
-	seq, err := v.Seq()
-	if err != nil {
-		return "", err
-	}
-
+	seq, _ := v.Seq()
 	return core.SeqString(seq, "[", "]", " ")
 }
 
@@ -81,7 +84,7 @@ func (v PersistentVector) tailoff() int {
 	return ((v.cnt - 1) >> bits) << bits
 }
 
-func (v PersistentVector) nodeFor(i int) (node, error) {
+func (v PersistentVector) nodeFor(i int) (*node, error) {
 	if i >= 0 && i < v.cnt {
 		if i >= v.tailoff() {
 			return v.tail, nil
@@ -89,13 +92,13 @@ func (v PersistentVector) nodeFor(i int) (node, error) {
 
 		n := v.root
 		for level := v.shift; level > 0; level -= bits {
-			n = n.array[(i>>level)&mask].(node) // TODO:  unsafe.Pointer
+			n = n.array[(i>>level)&mask].(*node) // TODO:  unsafe.Pointer
 		}
 
 		return n, nil
 	}
 
-	return node{}, ErrIndexOutOfBounds
+	return nil, ErrIndexOutOfBounds
 }
 
 // EntryAt i returns the ith entry in the Vector
@@ -111,12 +114,12 @@ func (v PersistentVector) EntryAt(i int) (core.Any, error) {
 // Assoc takes a value and "associates" it to the Vector,
 // assigning it to the index i.
 func (v PersistentVector) Assoc(i int, val core.Any) (core.Vector, error) {
-	vv, err := v.assoc(i, val)
+	vec, err := v.assoc(i, val)
 	if err != nil {
 		return nil, err
 	}
 
-	return vv, nil
+	return vec, nil
 }
 
 func (v PersistentVector) assoc(i int, val core.Any) (PersistentVector, error) {
@@ -147,24 +150,39 @@ func (v PersistentVector) assoc(i int, val core.Any) (PersistentVector, error) {
 	return PersistentVector{}, ErrIndexOutOfBounds
 }
 
-func (v PersistentVector) doAssoc(level int, n node, i int, val core.Any) node {
+func (v PersistentVector) doAssoc(level int, n *node, i int, val core.Any) *node {
 	ret := n
 	if level == 0 {
 		ret.array[i&mask] = val
 	} else {
 		subidx := (i >> level) & mask
-		ret.array[subidx] = v.doAssoc(level-bits, n.array[subidx].(node), i, val) // TODO: unsafe.Pointer
+		ret.array[subidx] = v.doAssoc(level-bits, n.array[subidx].(*node), i, val) // TODO: unsafe.Pointer
 	}
 
 	return ret
 }
 
+// Conj conjoins a value to the vector, appending it to the tail.
+func (v PersistentVector) Conj(vs ...core.Any) (core.Vector, error) { return v.Cons(vs...) }
+
 // Cons appends a value to the Vector.
-func (v PersistentVector) Cons(vs ...core.Any) core.Vector {
-	for _, val := range vs {
-		v = v.cons(val)
+func (v PersistentVector) Cons(vs ...core.Any) (core.Vector, error) {
+	switch len(vs) {
+	case 0:
+		return v, nil
+
+	case 1:
+		return v.cons(vs[0]), nil
+
+	default:
+		head, vs := vs[0], vs[1:]
+		t := v.cons(head).asTransient()
+		for _, val := range vs {
+			_ = t.cons(val)
+		}
+		return t.persistent(), nil
+
 	}
-	return v
 }
 
 func (v PersistentVector) cons(val core.Any) PersistentVector {
@@ -183,7 +201,7 @@ func (v PersistentVector) cons(val core.Any) PersistentVector {
 	}
 
 	// full tail; push into trie
-	var newRoot node
+	newRoot := &node{}
 	tailNode := v.tail.clone()
 	newShift := v.shift
 
@@ -205,7 +223,7 @@ func (v PersistentVector) cons(val core.Any) PersistentVector {
 	}
 }
 
-func newPath(level int, n node) node {
+func newPath(level int, n *node) *node {
 	if level == 0 {
 		return n
 	}
@@ -213,7 +231,7 @@ func newPath(level int, n node) node {
 	return newNode(newPath(level-bits, n))
 }
 
-func (v PersistentVector) pushTail(level int, parent, tailNode node) node {
+func (v PersistentVector) pushTail(level int, parent, tailNode *node) *node {
 	//if parent is leaf, insert node,
 	// else does it map to an existing child? -> nodeToInsert = pushNode one more level
 	// else alloc new path
@@ -222,13 +240,13 @@ func (v PersistentVector) pushTail(level int, parent, tailNode node) node {
 	subidx := ((v.cnt - 1) >> level) & mask
 	ret := parent.clone()
 
-	var nodeToInsert node
+	var nodeToInsert *node
 
 	if level == bits {
 		nodeToInsert = tailNode
 	} else {
 		if child := parent.array[subidx]; child != nil {
-			nodeToInsert = v.pushTail(level-bits, child.(node), tailNode) // TODO: unsafe.Pointer
+			nodeToInsert = v.pushTail(level-bits, child.(*node), tailNode) // TODO: unsafe.Pointer
 		} else {
 			nodeToInsert = newPath(level-bits, tailNode)
 		}
@@ -250,7 +268,7 @@ func (v PersistentVector) Pop() (core.Vector, error) {
 
 	// len(tail) > 1 ?
 	if v.cnt-v.tailoff() > 1 {
-		newTail := node{len: v.tail.len - 1}
+		newTail := &node{len: v.tail.len - 1}
 		copy(newTail.array[:newTail.len], v.tail.array[:])
 
 		return PersistentVector{
@@ -263,13 +281,22 @@ func (v PersistentVector) Pop() (core.Vector, error) {
 
 	newTail, err := v.nodeFor(v.cnt - 2)
 	if err != nil {
-		return nil, err
+		// TODO: we *should* be able to remove this error check.
+		//	     If this panic is triggered and the vector is a correct state (i.e.
+		// 		 lthibault was wrong and the error check CANNOT be removed), just return
+		//	     the error.
+		panic(fmt.Errorf("unreachable: %w", err))
 	}
 
 	newRoot := v.popTail(v.shift, v.root)
 	newShift := v.shift
+	if newRoot == nil {
+		newRoot = emptyNode
+	}
 	if v.shift > bits && newRoot.array[1] == nil {
-		newRoot = newRoot.array[0].(node) // TODO:  unsafe.Pointer
+		if newRoot.array[0] == nil {
+			newRoot = emptyNode
+		}
 		newShift -= bits
 	}
 
@@ -281,12 +308,12 @@ func (v PersistentVector) Pop() (core.Vector, error) {
 	}, nil
 }
 
-func (v PersistentVector) popTail(level int, n node) node {
+func (v PersistentVector) popTail(level int, n *node) *node {
 	subidx := ((v.cnt - 2) >> level) & mask
 	if level > bits {
-		newChild := v.popTail(level-bits, n.array[subidx].(node)) // TODO: unsafe.Pointer
-		if newChild.isZero() && subidx == 0 {
-			return node{}
+		newChild := v.popTail(level-bits, n.array[subidx].(*node)) // TODO: unsafe.Pointer
+		if newChild == nil && subidx == 0 {
+			return nil
 		}
 
 		ret := n.clone()
@@ -294,7 +321,7 @@ func (v PersistentVector) popTail(level int, n node) node {
 		// ret.len++
 		return ret
 	} else if subidx == 0 {
-		return node{}
+		return nil
 	}
 
 	ret := n.clone()
@@ -304,25 +331,23 @@ func (v PersistentVector) popTail(level int, n node) node {
 
 // Seq returns a sequence representation of the underlying Vector.
 // Note that the resulting Seq type has Vector semantics for Conj().
-func (v PersistentVector) Seq() (core.Seq, error) { return newChunkedSeq(v, 0, 0) }
+func (v PersistentVector) Seq() (core.Seq, error) { return newChunkedSeq(v, 0, 0), nil }
 
 type node struct {
 	len   int
 	array [width]interface{}
 }
 
-func newNode(vs ...interface{}) (n node) {
-	n.len = len(vs)
+func newNode(vs ...interface{}) *node {
+	n := &node{len: len(vs)}
 	for i, v := range vs {
 		n.array[i] = v
 	}
-	return
+	return n
 }
 
-func (n node) isZero() bool { return n.len == 0 }
-
-func (n node) clone() (nn node) {
-	nn.len = n.len
+func (n node) clone() *node {
+	nn := &node{len: n.len}
 	for i, v := range n.array {
 		nn.array[i] = v
 	}
@@ -331,16 +356,22 @@ func (n node) clone() (nn node) {
 
 type chunkedSeq struct {
 	vec       PersistentVector
-	node      node
+	node      *node
 	i, offset int
 }
 
-func newChunkedSeq(v PersistentVector, i, offset int) (seq chunkedSeq, err error) {
-	seq.vec = v
-	seq.i = i
-	seq.offset = offset
-	seq.node, err = v.nodeFor(i)
-	return
+func newChunkedSeq(v PersistentVector, i, offset int) chunkedSeq {
+	n, err := v.nodeFor(i)
+	if err != nil {
+		n = &node{}
+	}
+
+	return chunkedSeq{
+		vec:    v,
+		node:   n,
+		i:      i,
+		offset: offset,
+	}
 }
 
 func (cs chunkedSeq) Count() (int, error) { return cs.vec.cnt - (cs.i + cs.offset), nil }
@@ -362,7 +393,7 @@ func (cs chunkedSeq) Next() (core.Seq, error) {
 
 func (cs chunkedSeq) chunkedNext() (core.Seq, error) {
 	if cs.i+cs.node.len < cs.vec.cnt {
-		return newChunkedSeq(cs.vec, cs.i+cs.node.len, 0)
+		return newChunkedSeq(cs.vec, cs.i+cs.node.len, 0), nil
 	}
 
 	return nil, nil
@@ -373,12 +404,10 @@ func (cs chunkedSeq) Conj(items ...core.Any) (_ core.Seq, err error) {
 
 	// TODO(performance):  transient vector if len(items) > 1
 	for _, v := range items {
-		if cs.vec, err = cs.vec.assoc(i, v); err != nil {
-			return
-		}
+		cs.vec, _ = cs.vec.assoc(i, v)
 	}
 
-	return newChunkedSeq(cs.vec, cs.i, cs.offset)
+	return newChunkedSeq(cs.vec, cs.i, cs.offset), nil
 }
 
 // TransientVector is used to efficiently build a PersistentVector using the Conj method.
@@ -388,7 +417,7 @@ type transientVector PersistentVector
 func newTransientVector(items ...core.Any) *transientVector {
 	vec := EmptyVector.asTransient()
 	for _, val := range items {
-		_ = vec.Conj(val)
+		_, _ = vec.Conj(val)
 	}
 	return vec
 }
@@ -404,7 +433,17 @@ func (t transientVector) Count() (int, error) { return t.cnt, nil }
 
 func (t transientVector) Seq() (core.Seq, error) { return PersistentVector(t).Seq() }
 
-func (t *transientVector) Conj(val core.Any) *transientVector {
+func (t *transientVector) Conj(vs ...core.Any) (core.Vector, error) { return t.Cons(vs...) }
+
+func (t *transientVector) Cons(vs ...core.Any) (core.Vector, error) {
+	for _, val := range vs {
+		t.cons(val)
+	}
+
+	return t, nil
+}
+
+func (t *transientVector) cons(val core.Any) *transientVector {
 	// room in tail?
 	if t.cnt-t.tailoff() < 32 {
 		t.tail.array[t.cnt&mask] = val
@@ -414,7 +453,7 @@ func (t *transientVector) Conj(val core.Any) *transientVector {
 	}
 
 	// full tail; push into trie
-	var newRoot node
+	newRoot := &node{}
 	tailNode := t.tail.clone()
 	t.tail = newNode(val)
 	newShift := t.shift
@@ -435,7 +474,7 @@ func (t *transientVector) Conj(val core.Any) *transientVector {
 	return t
 }
 
-func (t *transientVector) pushTail(level int, parent, tailNode node) node {
+func (t *transientVector) pushTail(level int, parent, tailNode *node) *node {
 	//if parent is leaf, insert node,
 	// else does it map to an existing child? -> nodeToInsert = pushNode one more level
 	// else alloc new path
@@ -443,12 +482,12 @@ func (t *transientVector) pushTail(level int, parent, tailNode node) node {
 
 	subidx := ((t.cnt - 1) >> level) & mask
 	ret := parent // mutable; don't clone
-	var nodeToInsert node
+	var nodeToInsert *node
 	if level == bits {
 		nodeToInsert = tailNode
 	} else {
 		if child := parent.array[subidx]; child != nil {
-			nodeToInsert = t.pushTail(level-bits, child.(node), tailNode) // TODO: unsafe.Pointer
+			nodeToInsert = t.pushTail(level-bits, child.(*node), tailNode) // TODO: unsafe.Pointer
 		} else {
 			nodeToInsert = newPath(level-bits, tailNode)
 		}
@@ -458,7 +497,7 @@ func (t *transientVector) pushTail(level int, parent, tailNode node) node {
 	return ret
 }
 
-func (t *transientVector) nodeFor(i int) (node, error) {
+func (t *transientVector) nodeFor(i int) (*node, error) {
 	return (*PersistentVector)(t).nodeFor(i)
 }
 
@@ -478,19 +517,19 @@ func (t *transientVector) assoc(i int, val core.Any) (*transientVector, error) {
 	}
 
 	if i == t.cnt {
-		return t.Conj(val), nil
+		return t.cons(val), nil
 	}
 
 	return nil, ErrIndexOutOfBounds
 }
 
-func (t *transientVector) doAssoc(level int, n node, i int, val core.Any) node {
+func (t *transientVector) doAssoc(level int, n *node, i int, val core.Any) *node {
 	ret := n
 	if level == 0 {
 		ret.array[i&mask] = val
 	} else {
 		subidx := (i >> level) & mask
-		ret.array[subidx] = t.doAssoc(level-5, n.array[subidx].(node), i, val)
+		ret.array[subidx] = t.doAssoc(level-5, n.array[subidx].(*node), i, val)
 	}
 
 	return ret
@@ -501,33 +540,98 @@ func (t transientVector) EntryAt(i int) (core.Any, error) {
 }
 
 func (t *transientVector) Pop() (core.Vector, error) {
-	panic("function NOT IMPLEMENTED")
+	if t.cnt == 0 {
+		return nil, errors.New("cannot pop from empty vector")
+	}
+
+	if t.cnt == 1 { // TODO:  is this block necessary?
+		t.cnt = 0
+		t.tail.len = 0
+		return t, nil
+	}
+
+	// pop from tail?
+	if t.cnt&mask > 0 {
+		t.cnt--
+		t.tail.len--
+		return t, nil
+	}
+
+	newTail, err := t.nodeFor(t.cnt - 2)
+	if err != nil {
+		// TODO: we *should* be able to remove this error check.
+		//	     If this panic is triggered and the vector is a correct state (i.e.
+		// 		 lthibault was wrong and the error check CANNOT be removed), just return
+		//	     the error.
+		panic(fmt.Errorf("unreachable: %w", err))
+	}
+
+	newRoot := t.popTail(t.shift, t.root)
+	newShift := t.shift
+
+	if newRoot == nil {
+		newRoot = &node{}
+	}
+	if t.shift > 5 && newRoot.array[1] == nil {
+		if newRoot.array[0] == nil {
+			newRoot = &node{}
+		} else {
+			newRoot = newRoot.array[0].(*node) // TODO:  unsafe.Pointer
+		}
+		newShift -= bits
+	}
+
+	t.cnt--
+	t.shift = newShift
+	t.root = newRoot
+	t.tail = newTail
+	return t, nil
 }
 
-// VectorBuilder is used to efficiently build a PersistentVector using the Conj method.
+func (t *transientVector) popTail(level int, n *node) *node {
+	subidx := (t.cnt - 2>>level) & mask
+	if level > bits {
+		newChild := t.popTail(level-bits, n.array[subidx].(*node))
+		if newChild == nil && subidx == 0 {
+			return nil
+		}
+
+		ret := n
+		ret.array[subidx] = newChild
+		return ret
+	} else if subidx == 0 {
+		return nil
+	}
+
+	ret := n
+	ret.array[subidx] = nil
+	return ret
+}
+
+// VectorBuilder is used to efficiently build a PersistentVector using the Cons method.
 // It minimizes memory copying. The zero value is ready to use.  Do not copy a
 // VectorBuilder after first use.
 type VectorBuilder struct {
 	persisted bool
-	*transientVector
+	vec       *transientVector
 }
 
-// Conj appends a value to the end of the Vector.
-func (v *VectorBuilder) Conj(item core.Any) {
+// Cons constructs a vector by append the items sequentially to the tail of the vector.
+func (v *VectorBuilder) Cons(item ...core.Any) {
 	if v.persisted == true {
 		panic("vector already persisted")
 	}
 
-	if v.transientVector == nil {
-		v.transientVector = EmptyVector.asTransient()
+	if v.vec == nil {
+		v.vec = newTransientVector()
 	}
 
-	_ = v.transientVector.Conj(item)
+	_, _ = v.vec.Cons(item...)
 }
 
 // Vector returns the constructed vector.  VectorBuilder must not be used after a call
 // to Vector().
 func (v *VectorBuilder) Vector() PersistentVector {
 	v.persisted = true
-	return v.persistent()
+	return v.vec.persistent()
 }

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spy16/slurp/core"
@@ -8,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const size = 4096
+const size = 2048
 
 func TestVectorIsHashable(t *testing.T) {
 	t.Parallel()
@@ -22,6 +23,23 @@ func TestVectorIsHashable(t *testing.T) {
 	m[EmptyVector] = struct{}{}
 }
 
+func TestSeqToVector(t *testing.T) {
+	seq := NewList(Int64(0), Keyword("keyword"), String("string"))
+	v, err := SeqToVector(seq)
+	require.NoError(t, err)
+	require.NotNil(t, v)
+
+	var i int
+	_ = core.ForEach(seq, func(want core.Any) (bool, error) {
+		ve, err := v.EntryAt(i)
+		require.NoError(t, err, "iteration %d", i)
+
+		assert.Equal(t, want, ve)
+		i++
+		return false, nil
+	})
+}
+
 func TestEmptyVector(t *testing.T) {
 	t.Parallel()
 
@@ -30,6 +48,12 @@ func TestEmptyVector(t *testing.T) {
 
 	t.Run("SExpr", func(t *testing.T) {
 		testSExpr(t, EmptyVector, "[]")
+	})
+
+	t.Run("Seq", func(t *testing.T) {
+		seq, err := EmptyVector.Seq()
+		assert.NoError(t, err)
+		assert.NotNil(t, seq)
 	})
 
 	t.Run("Count", func(t *testing.T) {
@@ -47,30 +71,93 @@ func TestEmptyVector(t *testing.T) {
 		assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
 		assert.Nil(t, v)
 	})
+
+	t.Run("AssocOutOfBounds", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("PersistentVector", func(t *testing.T) {
+			v, err := EmptyVector.Assoc(9001, Nil{})
+			assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
+			assert.Nil(t, v)
+		})
+
+		t.Run("TransientVector", func(t *testing.T) {
+			v, err := EmptyVector.asTransient().Assoc(9001, Nil{})
+			assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
+			assert.Nil(t, v)
+		})
+	})
 }
 
 func TestPersistentVector(t *testing.T) {
 	t.Parallel()
 
-	var v core.Vector = EmptyVector
+	as := make([]core.Any, size)
+	for i := 0; i < size; i++ {
+		as[i] = Int64(i)
+	}
 
 	t.Run("SExpr", func(t *testing.T) {
+		t.Parallel()
+
 		testSExpr(t, NewVector(Int64(0), Keyword("keyword"), String("string")),
 			"[0 :keyword \"string\"]")
 	})
 
+	t.Run("Conj", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Nop", func(t *testing.T) {
+			v, err := EmptyVector.Conj()
+			require.NoError(t, err)
+			require.NotNil(t, v)
+			assert.Equal(t, EmptyVector, v)
+		})
+
+		t.Run("PersistentConj", func(t *testing.T) {
+			v, err := EmptyVector.Conj(Nil{})
+			require.NoError(t, err)
+			require.NotNil(t, v)
+
+			cnt, err := v.Count()
+			require.NoError(t, err, "Count() failed")
+			require.Equal(t, 1, cnt, "Count() returned incorrect value '%d'", cnt)
+		})
+
+		t.Run("TransientConj", func(t *testing.T) {
+			v, err := EmptyVector.Conj(as...)
+			require.NoError(t, err)
+			require.NotNil(t, v)
+
+			cnt, err := v.Count()
+			require.NoError(t, err, "Count() failed")
+			require.Equal(t, size, cnt, "Count() returned incorrect value '%d'", cnt)
+
+			for i, any := range as {
+				val, err := v.EntryAt(i)
+				require.NoError(t, err, "EntryAt() failed")
+				require.NotNil(t, val, "EntryAt() returned a nil value")
+				require.Equal(t, any, val,
+					"value recovered does not match associated value")
+			}
+		})
+
+	})
+
 	t.Run("Append", func(t *testing.T) {
-		// N.B.:  do not run in parallel.  `v` must be constructed by prior tests.
+		t.Parallel()
+
 		var err error
-		for i := 0; i < size; i++ {
-			v, err = v.Assoc(i, Int64(i))
+		var v core.Vector = EmptyVector
+		for i, any := range as {
+			v, err = v.Assoc(i, any)
 			require.NoError(t, err, "Assoc() failed")
 			require.NotNil(t, v, "Assoc() returned a nil vector")
 
 			val, err := v.EntryAt(i)
 			require.NoError(t, err, "EntryAt() failed")
 			require.NotNil(t, val, "EntryAt() returned a nil value")
-			require.Equal(t, Int64(i), val,
+			require.Equal(t, any, val,
 				"value recovered does not match associated value")
 
 			cnt, err := v.Count()
@@ -80,72 +167,68 @@ func TestPersistentVector(t *testing.T) {
 	})
 
 	t.Run("Replace", func(t *testing.T) {
-		// N.B.:  do not run in parallel.  `v` must be constructed by prior tests.
+		t.Parallel()
 
-		for _, tt := range []struct {
-			desc    string
-			idx     int
-			wantErr error
-		}{
-			{
-				idx:  0,
-				desc: "first",
-			},
-			{
-				idx:  1024,
-				desc: "branch-2",
-			},
-			{
-				idx:  4094,
-				desc: "tail",
-			},
-			{
-				idx:  size,
-				desc: "cons",
-			},
-			{
-				idx:     1000000,
-				desc:    "out of bounds",
-				wantErr: ErrIndexOutOfBounds,
-			},
-		} {
-			t.Run(tt.desc, func(t *testing.T) {
-				t.Parallel()
+		v := NewVector(as...)
+		for i := range as {
+			vPrime, err := v.Assoc(i, Nil{})
+			assert.NoError(t, err)
+			assert.NotNil(t, vPrime)
 
-				// shadow v & err in order to make this thread-safe
-				v, err := v.Assoc(tt.idx, Nil{})
-				if tt.wantErr == nil {
-					assert.NoError(t, err)
-
-					val, err := v.EntryAt(tt.idx)
-					assert.NoError(t, err)
-					assert.Equal(t, Nil{}, val)
-				} else {
-					assert.EqualError(t, err, tt.wantErr.Error())
-					assert.Nil(t, v)
-				}
-			})
+			val, err := vPrime.EntryAt(i)
+			assert.NoError(t, err)
+			assert.Equal(t, Nil{}, val)
 		}
 	})
 
 	t.Run("Pop", func(t *testing.T) {
-		// N.B.:  do not run in parallel.  `v` must be constructed by prior tests.
+		t.Parallel()
 
-		t.Skip("Pop() NOT IMPLEMENTED.  Skipping...")
+		var v core.Vector = NewVector(as...)
 
 		cnt, err := v.Count()
 		require.NoError(t, err, "test precondition failed")
 		require.Equal(t, size, cnt)
 
-		for i := size - 1; i >= 0; i-- {
+		for i := range as {
 			v, err = v.Pop()
-			require.NoError(t, err)
-			require.NotNil(t, v)
+			require.NoError(t, err, "iteration %d", i)
+			require.NotNil(t, v, "iteration %d", i)
 
 			cnt, err = v.Count()
-			require.NoError(t, err)
-			require.Equal(t, i, cnt)
+			require.NoError(t, err, "iteration %d", i)
+			require.Equal(t, size-1-i, cnt, "iteration %d", i)
 		}
+
+		v, err = v.Pop()
+		assert.EqualError(t, err, "cannot pop from empty vector")
+		assert.Nil(t, v)
+	})
+
+	t.Run("Seq", func(t *testing.T) {
+		seq, err := EmptyVector.Seq()
+		require.NoError(t, err)
+		require.NotNil(t, seq)
+
+		seq, err = seq.Conj(as[1:]...)
+		require.NoError(t, err)
+		require.NotNil(t, seq)
+
+		wants := make([]core.Any, len(as))
+		copy(wants, as)
+		for left, right := 0, len(wants)-1; left < right; left, right = left+1, right-1 {
+			wants[left], wants[right] = wants[right], wants[left]
+		}
+
+		var i int
+		err = core.ForEach(seq, func(got core.Any) (bool, error) {
+			if !assert.Equal(t, wants[i], got) {
+				return true, nil
+			}
+
+			i++
+			return false, nil
+		})
 	})
 }
 
@@ -170,6 +253,8 @@ func TestTransientVector(t *testing.T) {
 	})
 
 	t.Run("SExpr", func(t *testing.T) {
+		t.Parallel()
+
 		vec := newTransientVector(Int64(0), Keyword("keyword"), String("string"))
 		testSExpr(t, vec, "[0 :keyword \"string\"]")
 	})
@@ -182,6 +267,26 @@ func TestTransientVector(t *testing.T) {
 		cnt, err := v.Count()
 		assert.NoError(t, err)
 		assert.Equal(t, size, cnt)
+	})
+
+	t.Run("Conj", func(t *testing.T) {
+		t.Parallel()
+
+		v, err := newTransientVector().Conj(as...)
+		require.NoError(t, err)
+		require.NotNil(t, v)
+
+		cnt, err := v.Count()
+		require.NoError(t, err, "Count() failed")
+		require.Equal(t, size, cnt, "Count() returned incorrect value '%d'", cnt)
+
+		for i, any := range as {
+			val, err := v.EntryAt(i)
+			require.NoError(t, err, "EntryAt() failed")
+			require.NotNil(t, val, "EntryAt() returned a nil value")
+			require.Equal(t, any, val,
+				"value recovered does not match associated value")
+		}
 	})
 
 	t.Run("Append", func(t *testing.T) {
@@ -216,6 +321,76 @@ func TestTransientVector(t *testing.T) {
 		}
 	})
 
+	t.Run("Replace", func(t *testing.T) {
+		t.Parallel()
+
+		var v core.Vector = newTransientVector(as...)
+		for i := range as {
+			vPrime, err := v.Assoc(i, Nil{})
+			assert.NoError(t, err)
+			assert.NotNil(t, vPrime)
+
+			val, err := v.EntryAt(i)
+			assert.NoError(t, err)
+			assert.Equal(t, Nil{}, val)
+
+			val, err = vPrime.EntryAt(i)
+			assert.NoError(t, err)
+			assert.Equal(t, Nil{}, val)
+		}
+	})
+
+	t.Run("Pop", func(t *testing.T) {
+		t.Parallel()
+
+		var v core.Vector = newTransientVector(as...)
+
+		cnt, err := v.Count()
+		require.NoError(t, err, "test precondition failed")
+		require.Equal(t, size, cnt)
+
+		for i := range as {
+			vPrime, err := v.Pop()
+			require.NoError(t, err, "iteration %d", i)
+			require.NotNil(t, vPrime, "iteration %d", i)
+
+			cnt, err = v.Count()
+			require.NoError(t, err, "iteration %d", i)
+			require.Equal(t, size-1-i, cnt, "iteration %d", i)
+
+			cnt, err = vPrime.Count()
+			require.NoError(t, err, "iteration %d", i)
+			require.Equal(t, size-1-i, cnt, "iteration %d", i)
+		}
+
+		v, err = v.Pop()
+		assert.EqualError(t, err, "cannot pop from empty vector")
+		assert.Nil(t, v)
+	})
+
+	t.Run("Seq", func(t *testing.T) {
+		v := newTransientVector(as...)
+		seq, err := v.Seq()
+		require.NoError(t, err)
+
+		var i int
+		err = core.ForEach(seq, func(want core.Any) (bool, error) {
+			got, err := v.EntryAt(i)
+			if err != nil {
+				return true, fmt.Errorf("%w (%d)", err, i)
+			}
+
+			if !assert.Equal(t, want, got) {
+				return true, nil
+			}
+
+			i++
+			return false, nil
+		})
+
+		assert.NoError(t, err)
+	})
+
 	t.Run("Invariants", func(t *testing.T) {
 		t.Parallel()
 
@@ -235,7 +410,7 @@ func TestVectorBuilder(t *testing.T) {
 
 	var b VectorBuilder
 	for i := 0; i < size; i++ {
-		b.Conj(Int64(i))
+		b.Cons(Int64(i))
 	}
 
 	v := b.Vector()
@@ -244,5 +419,5 @@ func TestVectorBuilder(t *testing.T) {
 	n, err := b.Vector().Count()
 	assert.NoError(t, err)
 	assert.Equal(t, size, n)
-	assert.Panics(t, func() { b.Conj(Nil{}) })
+	assert.Panics(t, func() { b.Cons(Nil{}) })
 }
