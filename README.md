@@ -22,7 +22,7 @@ Slurp is a highly customisable, embeddable LISP toolkit for `Go` applications.
 * Support for macros.
 * Easy to extend. See [Extending](#extending).
 * Tiny & powerful REPL package.
-* Zero dependencies.
+* Zero dependencies (outside of tests).
 
 ## Usage
 
