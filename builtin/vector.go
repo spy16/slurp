@@ -330,7 +330,7 @@ func (v PersistentVector) popTail(level int, n *node) *node {
 }
 
 // Seq returns a sequence representation of the underlying Vector.
-// Note that the resulting Seq type has Vector semantics for Conj().
+// Note that the resulting Seq type has LinkedList semantics for Conj().
 func (v PersistentVector) Seq() (core.Seq, error) { return newChunkedSeq(v, 0, 0), nil }
 
 type node struct {
