@@ -586,6 +586,68 @@ func TestReader_One_List(t *testing.T) {
 	})
 }
 
+// func TestReader_One_Vector(t *testing.T) {
+// 	executeReaderTests(t, []readerTestCase{
+// 		{
+// 			name: "EmptyVector",
+// 			src:  `[]`,
+// 			want: builtin.Vector{},
+// 		},
+// 		{
+// 			name: "VectorWithOneEntry",
+// 			src:  `[help]`,
+// 			want: builtin.Vector{builtin.Symbol("help")},
+// 		},
+// 		{
+// 			name: "VectorWithMultipleEntry",
+// 			src:  `[+ 0xF 3.1413]`,
+// 			want: builtin.Vector{
+// 				builtin.Symbol("+"),
+// 				builtin.Int64(15),
+// 				builtin.Float64(3.1413),
+// 			},
+// 		},
+// 		{
+// 			name: "VectorWithCommaSeparator",
+// 			src:  `[+,0xF,3.1413]`,
+// 			want: builtin.Vector{
+// 				builtin.Symbol("+"),
+// 				builtin.Int64(15),
+// 				builtin.Float64(3.1413),
+// 			},
+// 		},
+// 		{
+// 			name: "MultiLine",
+// 			src: `[+
+//                       0xF
+//                       3.1413
+// 					]`,
+// 			want: builtin.Vector{
+// 				builtin.Symbol("+"),
+// 				builtin.Int64(15),
+// 				builtin.Float64(3.1413),
+// 			},
+// 		},
+// 		{
+// 			name: "MultiLineWithComments",
+// 			src: `[+         ; plus operator adds numerical values
+//                       0xF    ; hex representation of 15
+//                       3.1413 ; value of math constant pi
+//                   ]`,
+// 			want: builtin.Vector{
+// 				builtin.Symbol("+"),
+// 				builtin.Int64(15),
+// 				builtin.Float64(3.1413),
+// 			},
+// 		},
+// 		{
+// 			name:    "UnexpectedEOF",
+// 			src:     "[+ 1 2 ",
+// 			wantErr: true,
+// 		},
+// 	})
+// }
+
 type readerTestCase struct {
 	name    string
 	src     string

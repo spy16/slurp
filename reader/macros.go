@@ -27,24 +27,6 @@ type Macro func(rd *Reader, init rune) (core.Any, error)
 // 	}
 // }
 
-// // TODO(enhancement): implement slurp.Vector
-// // VectorReader implements the reader macro for reading vector from source.
-// func VectorReader(vecEnd rune, factory func() slurp.Vector) Macro {
-// 	return func(rd *Reader, _ rune) (core.Any, error) {
-// 		forms, err := rd.Container(vecEnd, "Vector")
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		vec := factory()
-// 		for _, f := range forms {
-// 			_ = f
-// 		}
-
-// 		return vec, nil
-// 	}
-// }
-
 // // TODO(enhancement) implement slurp.Map
 // // MapReader returns a reader macro for reading map values from source. factory
 // // is used to construct the map and `Assoc` is called for every pair read.
@@ -281,4 +263,15 @@ func quoteFormReader(expandFunc string) Macro {
 
 		return builtin.NewList(builtin.Symbol(expandFunc), expr), nil
 	}
+}
+
+// readVector implements the reader macro for reading vector from source.
+func readVector(rd *Reader, _ rune) (core.Any, error) {
+	const vecEnd = ']'
+
+	v := builtin.EmptyVector.Transient()
+	return v.Persistent(), rd.Container(vecEnd, "Vector", func(val core.Any) error {
+		v.Cons(val)
+		return nil
+	})
 }
