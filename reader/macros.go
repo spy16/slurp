@@ -269,9 +269,9 @@ func quoteFormReader(expandFunc string) Macro {
 func readVector(rd *Reader, _ rune) (core.Any, error) {
 	const vecEnd = ']'
 
-	var b builtin.VectorBuilder
-	return b.Vector(), rd.Container(vecEnd, "Vector", func(val core.Any) error {
-		b.Cons(val)
+	v := builtin.EmptyVector.Transient()
+	return v.Persistent(), rd.Container(vecEnd, "Vector", func(val core.Any) error {
+		v.Cons(val)
 		return nil
 	})
 }

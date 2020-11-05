@@ -9,7 +9,7 @@ import (
 
 var (
 	_ core.Vector = (*PersistentVector)(nil)
-	_ core.Vector = (*transientVector)(nil)
+	_ core.Vector = (*TransientVector)(nil)
 )
 
 const (
@@ -41,21 +41,31 @@ type PersistentVector struct {
 
 // NewVector builds a PersistentVector efficiently.
 func NewVector(items ...core.Any) PersistentVector {
-	return newTransientVector(items...).persistent()
+	v := EmptyVector.Transient()
+	for _, val := range items {
+		v = v.cons(val)
+	}
+
+	return v.Persistent()
 }
 
 // SeqToVector efficiently builds a PersistentVector from a Seq.
 func SeqToVector(seq core.Seq) (PersistentVector, error) {
-	vec := EmptyVector.asTransient()
+	vec := EmptyVector.Transient()
 	err := core.ForEach(seq, func(val core.Any) (bool, error) {
-		_, _ = vec.Conj(val)
+		vec = vec.cons(val)
 		return false, nil
 	})
-	return vec.persistent(), err
+	return vec.Persistent(), err
 }
 
-func (v PersistentVector) asTransient() *transientVector {
-	return &transientVector{
+// Transient returns a *TransientVector with the same value as v.
+// The transient vector is mutable, making suitable for optimizing
+// tight loops where intermediate values of the transient are not shared.
+// When the transient vector has reached the desired state, it should be
+// persisted with a call to Persistent() prior to sharing.
+func (v PersistentVector) Transient() *TransientVector {
+	return &TransientVector{
 		cnt:   v.cnt,
 		shift: v.shift,
 		root:  v.root.clone(),
@@ -176,11 +186,11 @@ func (v PersistentVector) Cons(vs ...core.Any) (core.Vector, error) {
 
 	default:
 		head, vs := vs[0], vs[1:]
-		t := v.cons(head).asTransient()
+		t := v.cons(head).Transient()
 		for _, val := range vs {
 			_ = t.cons(val)
 		}
-		return t.persistent(), nil
+		return t.Persistent(), nil
 
 	}
 }
@@ -412,30 +422,28 @@ func (cs chunkedSeq) Conj(items ...core.Any) (_ core.Seq, err error) {
 
 // TransientVector is used to efficiently build a PersistentVector using the Conj method.
 // It minimizes memory copying.
-type transientVector PersistentVector
+type TransientVector PersistentVector
 
-func newTransientVector(items ...core.Any) *transientVector {
-	vec := EmptyVector.asTransient()
-	for _, val := range items {
-		_, _ = vec.Conj(val)
-	}
-	return vec
-}
+// Persistent finalizes the TransientVector into a PersistentVector.
+// Users MUST NOT mutate t after a call to Persistent.
+func (t TransientVector) Persistent() PersistentVector { return PersistentVector(t) }
 
-// N.B.:  transientVector must not be modified after call to persistent()
-func (t transientVector) persistent() PersistentVector { return PersistentVector(t) }
+func (t TransientVector) tailoff() int { return PersistentVector(t).tailoff() }
 
-func (t transientVector) tailoff() int { return PersistentVector(t).tailoff() }
+// SExpr returns an s-expression for the vector.
+func (t TransientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
 
-func (t transientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
+// Count the number of elements in the vector.
+func (t TransientVector) Count() (int, error) { return t.cnt, nil }
 
-func (t transientVector) Count() (int, error) { return t.cnt, nil }
+// Seq returns a list-like representation of the vector.  Conj has LinkedList semantics.
+func (t TransientVector) Seq() (core.Seq, error) { return PersistentVector(t).Seq() }
 
-func (t transientVector) Seq() (core.Seq, error) { return PersistentVector(t).Seq() }
+// Conj conjoins a set of values by repeatedly calling t.Cons.
+func (t *TransientVector) Conj(vs ...core.Any) (core.Vector, error) { return t.Cons(vs...) }
 
-func (t *transientVector) Conj(vs ...core.Any) (core.Vector, error) { return t.Cons(vs...) }
-
-func (t *transientVector) Cons(vs ...core.Any) (core.Vector, error) {
+// Cons constructs the vector by appending a sequence of values.
+func (t *TransientVector) Cons(vs ...core.Any) (core.Vector, error) {
 	for _, val := range vs {
 		t.cons(val)
 	}
@@ -443,7 +451,7 @@ func (t *transientVector) Cons(vs ...core.Any) (core.Vector, error) {
 	return t, nil
 }
 
-func (t *transientVector) cons(val core.Any) *transientVector {
+func (t *TransientVector) cons(val core.Any) *TransientVector {
 	// room in tail?
 	if t.cnt-t.tailoff() < 32 {
 		t.tail.array[t.cnt&mask] = val
@@ -474,7 +482,7 @@ func (t *transientVector) cons(val core.Any) *transientVector {
 	return t
 }
 
-func (t *transientVector) pushTail(level int, parent, tailNode *node) *node {
+func (t *TransientVector) pushTail(level int, parent, tailNode *node) *node {
 	//if parent is leaf, insert node,
 	// else does it map to an existing child? -> nodeToInsert = pushNode one more level
 	// else alloc new path
@@ -497,15 +505,16 @@ func (t *transientVector) pushTail(level int, parent, tailNode *node) *node {
 	return ret
 }
 
-func (t *transientVector) nodeFor(i int) (*node, error) {
+func (t *TransientVector) nodeFor(i int) (*node, error) {
 	return (*PersistentVector)(t).nodeFor(i)
 }
 
-func (t *transientVector) Assoc(i int, val core.Any) (core.Vector, error) {
+// Assoc associates a value at a given index.
+func (t *TransientVector) Assoc(i int, val core.Any) (core.Vector, error) {
 	return t.assoc(i, val)
 }
 
-func (t *transientVector) assoc(i int, val core.Any) (*transientVector, error) {
+func (t *TransientVector) assoc(i int, val core.Any) (*TransientVector, error) {
 	if i >= 0 && i < t.cnt {
 		if i >= t.tailoff() {
 			t.tail.array[i&mask] = val
@@ -523,7 +532,7 @@ func (t *transientVector) assoc(i int, val core.Any) (*transientVector, error) {
 	return nil, ErrIndexOutOfBounds
 }
 
-func (t *transientVector) doAssoc(level int, n *node, i int, val core.Any) *node {
+func (t *TransientVector) doAssoc(level int, n *node, i int, val core.Any) *node {
 	ret := n
 	if level == 0 {
 		ret.array[i&mask] = val
@@ -535,11 +544,13 @@ func (t *transientVector) doAssoc(level int, n *node, i int, val core.Any) *node
 	return ret
 }
 
-func (t transientVector) EntryAt(i int) (core.Any, error) {
+// EntryAt the specified index.
+func (t TransientVector) EntryAt(i int) (core.Any, error) {
 	return PersistentVector(t).EntryAt(i)
 }
 
-func (t *transientVector) Pop() (core.Vector, error) {
+// Pop removes the last item from the vector.
+func (t *TransientVector) Pop() (core.Vector, error) {
 	if t.cnt == 0 {
 		return nil, errors.New("cannot pop from empty vector")
 	}
@@ -588,7 +599,7 @@ func (t *transientVector) Pop() (core.Vector, error) {
 	return t, nil
 }
 
-func (t *transientVector) popTail(level int, n *node) *node {
+func (t *TransientVector) popTail(level int, n *node) *node {
 	subidx := (t.cnt - 2>>level) & mask
 	if level > bits {
 		newChild := t.popTail(level-bits, n.array[subidx].(*node))
@@ -606,36 +617,4 @@ func (t *transientVector) popTail(level int, n *node) *node {
 	ret := n
 	ret.array[subidx] = nil
 	return ret
-}
-
-// VectorBuilder is used to efficiently build a PersistentVector using the Cons method.
-// It minimizes memory copying. The zero value is ready to use.  Do not copy a
-// VectorBuilder after first use.
-type VectorBuilder struct {
-	persisted bool
-	vec       *transientVector
-}
-
-// Cons constructs a vector by append the items sequentially to the tail of the vector.
-func (v *VectorBuilder) Cons(item ...core.Any) {
-	if v.persisted == true {
-		panic("vector already persisted")
-	}
-
-	if v.vec == nil {
-		v.vec = newTransientVector()
-	}
-
-	_, _ = v.vec.Cons(item...)
-}
-
-// Vector returns the constructed vector.  VectorBuilder must not be used after a call
-// to Vector().
-func (v *VectorBuilder) Vector() PersistentVector {
-	v.persisted = true
-	if v.vec == nil {
-		return EmptyVector
-	}
-
-	return v.vec.persistent()
 }

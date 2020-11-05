@@ -82,7 +82,7 @@ func TestEmptyVector(t *testing.T) {
 		})
 
 		t.Run("TransientVector", func(t *testing.T) {
-			v, err := EmptyVector.asTransient().Assoc(9001, Nil{})
+			v, err := EmptyVector.Transient().Assoc(9001, Nil{})
 			assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
 			assert.Nil(t, v)
 		})
@@ -243,7 +243,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("NewTransientVector", func(t *testing.T) {
 		t.Parallel()
 
-		v := newTransientVector(as...)
+		v := NewVector(as...).Transient()
 		assert.NotNil(t, v)
 
 		cnt, err := v.Count()
@@ -255,14 +255,14 @@ func TestTransientVector(t *testing.T) {
 	t.Run("SExpr", func(t *testing.T) {
 		t.Parallel()
 
-		vec := newTransientVector(Int64(0), Keyword("keyword"), String("string"))
+		vec := NewVector(Int64(0), Keyword("keyword"), String("string")).Transient()
 		testSExpr(t, vec, "[0 :keyword \"string\"]")
 	})
 
 	t.Run("Count", func(t *testing.T) {
 		t.Parallel()
 
-		v := newTransientVector(as...)
+		v := NewVector(as...).Transient()
 
 		cnt, err := v.Count()
 		assert.NoError(t, err)
@@ -272,7 +272,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Conj", func(t *testing.T) {
 		t.Parallel()
 
-		v, err := newTransientVector().Conj(as...)
+		v, err := EmptyVector.Transient().Conj(as...)
 		require.NoError(t, err)
 		require.NotNil(t, v)
 
@@ -292,7 +292,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Append", func(t *testing.T) {
 		t.Parallel()
 
-		v := EmptyVector.asTransient()
+		v := EmptyVector.Transient()
 
 		for i := 0; i < size; i++ {
 			vPrime, err := v.Assoc(i, Int64(i))
@@ -324,7 +324,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Replace", func(t *testing.T) {
 		t.Parallel()
 
-		var v core.Vector = newTransientVector(as...)
+		var v core.Vector = NewVector(as...).Transient()
 		for i := range as {
 			vPrime, err := v.Assoc(i, Nil{})
 			assert.NoError(t, err)
@@ -343,7 +343,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Pop", func(t *testing.T) {
 		t.Parallel()
 
-		var v core.Vector = newTransientVector(as...)
+		var v core.Vector = NewVector(as...).Transient()
 
 		cnt, err := v.Count()
 		require.NoError(t, err, "test precondition failed")
@@ -369,7 +369,7 @@ func TestTransientVector(t *testing.T) {
 	})
 
 	t.Run("Seq", func(t *testing.T) {
-		v := newTransientVector(as...)
+		v := NewVector(as...).Transient()
 		seq, err := v.Seq()
 		require.NoError(t, err)
 
@@ -394,38 +394,13 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Invariants", func(t *testing.T) {
 		t.Parallel()
 
-		v := EmptyVector.asTransient()
+		v := EmptyVector.Transient()
 		v.Conj(Nil{})
 
 		assert.NotEqual(t, EmptyVector, v,
 			"derived transient mutated EmptyVector")
 
-		assert.Equal(t, EmptyVector, EmptyVector.asTransient().persistent(),
-			"persistent() ∘ asTransient() ∘ persistent() ∘ EmptyVector != EmptyVector")
+		assert.Equal(t, EmptyVector, EmptyVector.Transient().Persistent(),
+			"persistent() ∘ Transient() ∘ persistent() ∘ EmptyVector != EmptyVector")
 	})
-}
-
-func TestVectorBuilder(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Empty", func(t *testing.T) {
-		var b VectorBuilder
-		assert.Equal(t, EmptyVector, b.Vector())
-	})
-
-	t.Run("NonEmpty", func(t *testing.T) {
-		var b VectorBuilder
-		for i := 0; i < size; i++ {
-			b.Cons(Int64(i))
-		}
-
-		v := b.Vector()
-		assert.NotZero(t, v)
-
-		n, err := b.Vector().Count()
-		assert.NoError(t, err)
-		assert.Equal(t, size, n)
-		assert.Panics(t, func() { b.Cons(Nil{}) })
-	})
-
 }
