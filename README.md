@@ -9,7 +9,7 @@ Slurp is a highly customisable, embeddable LISP toolkit for `Go` applications.
 * Highly customizable, safe and powerful reader/parser through
   a read table (Inspired by [Clojure](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/LispReader.java)) (See [Reader](#reader))
 * Built-in data types: nil, bool, string, numbers (int & float),
-  character, keyword, symbol, list.
+  character, keyword, symbol, list, vector & map.
 * Multiple number formats supported: decimal, octal, hexadecimal,
   radix and scientific notations.
 * Full unicode support. Symbols, keywords etc. can include unicode
