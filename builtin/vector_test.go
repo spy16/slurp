@@ -404,3 +404,106 @@ func TestTransientVector(t *testing.T) {
 			"persistent() ∘ Transient() ∘ persistent() ∘ EmptyVector != EmptyVector")
 	})
 }
+
+func BenchmarkVector(b *testing.B) {
+	for name, runner := range map[string]func(*testing.B){
+		"PersistentVector_NoTransient":   runBenchmarks(b, new(persistentUnoptimized)),
+		"PersistentVector_WithTransient": runBenchmarks(b, new(persistentOptimized)),
+		"TransientVector_NoBatch":        runBenchmarks(b, new(transientUnbatched)),
+		"TransientVector_Batched":        runBenchmarks(b, new(transientBatched)),
+	} {
+		b.Run(name, runner)
+	}
+}
+
+func runBenchmarks(b *testing.B, s benchSuite) func(*testing.B) {
+	return func(b *testing.B) {
+		for name, runner := range map[string]func(*testing.B){
+			"Conj": s.BenchmarkConj,
+		} {
+			b.Run(name, func(b *testing.B) {
+				s.Setup(b)
+				defer s.Teardown()
+
+				b.ReportAllocs()
+				b.ResetTimer()
+
+				runner(b)
+			})
+		}
+	}
+}
+
+type benchSuite interface {
+	Setup(*testing.B)
+	Teardown()
+	BenchmarkConj(*testing.B)
+}
+
+type persistentUnoptimized struct{ vec core.Vector }
+
+func (suite *persistentUnoptimized) Setup(b *testing.B) { suite.vec = EmptyVector }
+
+func (suite *persistentUnoptimized) Teardown() {}
+
+func (suite *persistentUnoptimized) BenchmarkConj(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		// call Conj() one item at a time to avoid triggering transient optimization.
+		suite.vec, _ = suite.vec.Conj(Int64(i))
+	}
+}
+
+type persistentOptimized struct {
+	vec   core.Vector
+	items []core.Any
+}
+
+func (suite *persistentOptimized) Setup(b *testing.B) {
+	suite.vec = EmptyVector
+
+	suite.items = make([]core.Any, b.N)
+	for i := 0; i < b.N; i++ {
+		suite.items[i] = Int64(i)
+	}
+}
+
+func (suite *persistentOptimized) Teardown() {}
+
+func (suite *persistentOptimized) BenchmarkConj(b *testing.B) {
+	suite.vec, _ = suite.vec.Conj(suite.items...)
+}
+
+type transientUnbatched struct{ vec core.Vector }
+
+func (suite *transientUnbatched) Setup(b *testing.B) {
+	suite.vec = EmptyVector.Transient()
+}
+
+func (suite *transientUnbatched) Teardown() {}
+
+func (suite *transientUnbatched) BenchmarkConj(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		// call Conj() one item at a time to avoid triggering transient optimization.
+		suite.vec, _ = suite.vec.Conj(Int64(i))
+	}
+}
+
+type transientBatched struct {
+	vec   core.Vector
+	items []core.Any
+}
+
+func (suite *transientBatched) Setup(b *testing.B) {
+	suite.vec = EmptyVector.Transient()
+
+	suite.items = make([]core.Any, b.N)
+	for i := 0; i < b.N; i++ {
+		suite.items[i] = Int64(i)
+	}
+}
+
+func (suite *transientBatched) Teardown() {}
+
+func (suite *transientBatched) BenchmarkConj(b *testing.B) {
+	suite.vec, _ = suite.vec.Conj(suite.items...)
+}
