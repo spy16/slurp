@@ -633,5 +633,9 @@ func (v *VectorBuilder) Cons(item ...core.Any) {
 // to Vector().
 func (v *VectorBuilder) Vector() PersistentVector {
 	v.persisted = true
+	if v.vec == nil {
+		return EmptyVector
+	}
+
 	return v.vec.persistent()
 }

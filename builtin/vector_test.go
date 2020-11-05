@@ -408,16 +408,24 @@ func TestTransientVector(t *testing.T) {
 func TestVectorBuilder(t *testing.T) {
 	t.Parallel()
 
-	var b VectorBuilder
-	for i := 0; i < size; i++ {
-		b.Cons(Int64(i))
-	}
+	t.Run("Empty", func(t *testing.T) {
+		var b VectorBuilder
+		assert.Equal(t, EmptyVector, b.Vector())
+	})
 
-	v := b.Vector()
-	assert.NotZero(t, v)
+	t.Run("NonEmpty", func(t *testing.T) {
+		var b VectorBuilder
+		for i := 0; i < size; i++ {
+			b.Cons(Int64(i))
+		}
 
-	n, err := b.Vector().Count()
-	assert.NoError(t, err)
-	assert.Equal(t, size, n)
-	assert.Panics(t, func() { b.Cons(Nil{}) })
+		v := b.Vector()
+		assert.NotZero(t, v)
+
+		n, err := b.Vector().Count()
+		assert.NoError(t, err)
+		assert.Equal(t, size, n)
+		assert.Panics(t, func() { b.Cons(Nil{}) })
+	})
+
 }
