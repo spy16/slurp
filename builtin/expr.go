@@ -173,3 +173,40 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 
 	return fn.Invoke(args...)
 }
+
+// VectorExpr evaluates a vector.
+type VectorExpr struct {
+	Analyzer core.Analyzer
+	Vector   core.Vector
+}
+
+// Eval returns a new vector whose contents are the evaluated values
+// of the objects contained by the evaluated vector. Elements are evaluated left to right.
+func (vex VectorExpr) Eval(env core.Env) (core.Any, error) {
+	cnt, err := vex.Vector.Count()
+	if err != nil || cnt == 0 {
+		return vex.Vector, err
+	}
+
+	for i := 0; i < cnt; i++ {
+		any, err := vex.Vector.EntryAt(i)
+		if err != nil {
+			return nil, err
+		}
+
+		other, err := core.Eval(env, vex.Analyzer, any)
+		if err != nil {
+			return nil, err
+		}
+
+		if any == other {
+			continue
+		}
+
+		if vex.Vector, err = vex.Vector.Assoc(i, other); err != nil {
+			return nil, err
+		}
+	}
+
+	return vex.Vector, nil
+}
