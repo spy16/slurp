@@ -410,7 +410,7 @@ func (cs chunkedSeq) chunkedNext() (core.Seq, error) {
 }
 
 func (cs chunkedSeq) Conj(items ...core.Any) (_ core.Seq, err error) {
-	i, _ := cs.vec.Count()
+	i := cs.vec.cnt
 
 	// TODO(performance):  transient vector if len(items) > 1
 	for _, v := range items {
