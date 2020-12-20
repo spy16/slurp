@@ -41,7 +41,10 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 		return ResolveExpr{Symbol: f}, nil
 
 	case core.Vector:
-		return VectorExpr{Vector: f}, nil
+		return VectorExpr{
+			Vector:   f,
+			Analyzer: ba,
+		}, nil
 
 	case core.Seq:
 		cnt, err := f.Count()
