@@ -2,11 +2,12 @@ package builtin_test
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuiltinAnalyzer_Analyze(t *testing.T) {
@@ -62,32 +63,33 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 					},
 				},
 			}
+
 			got, err := ba.Analyze(tt.env, tt.form)
 			if tt.wantErr != nil {
-				assert(t, errors.Is(err, tt.wantErr),
-					"\nwantErr=%#v\ngot=%#v", tt.wantErr, got)
-				assert(t, got == nil, "want nil, got %#v", got)
-			} else {
-				assert(t, err == nil, "unexpected err: %#v", err)
-				assert(t, reflect.DeepEqual(tt.want, got),
-					"\nwant=%#v\ngot=%#v", tt.want, got)
+				if assert.Error(t, err) {
+					assert.True(t, errors.Is(err, tt.wantErr),
+						"error is not '%s'", tt.wantErr)
+				}
+			} else if assert.NoError(t, err) {
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
 }
 
-func assert(t testInstance, cond bool, msg string, args ...interface{}) {
-	if !cond {
-		t.Errorf(msg, args...)
-	}
-}
+func TestBultinAnalyzer_Analyze_Vector(t *testing.T) {
+	t.Parallel()
 
-type testInstance interface {
-	Errorf(msg string, args ...interface{})
+	vec := builtin.NewVector(builtin.Symbol("foo"))
+
+	var ba builtin.Analyzer
+	expr, err := ba.Analyze(core.New(nil), vec)
+	require.NoError(t, err)
+	require.IsType(t, builtin.VectorExpr{}, expr)
+	assert.Equal(t, vec, expr.(builtin.VectorExpr).Vector)
+	assert.Equal(t, ba, expr.(builtin.VectorExpr).Analyzer)
 }
 
 type fakeFn struct{}
 
-func (fakeFn) Invoke(_ ...core.Any) (core.Any, error) {
-	return 100, nil
-}
+func (fakeFn) Invoke(_ ...core.Any) (core.Any, error) { return 100, nil }
