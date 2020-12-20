@@ -37,14 +37,13 @@ type Interpreter struct {
 	analyzer core.Analyzer
 }
 
-// Eval performs syntax analysis of the given form to produce an Expr
-// and evaluates the Expr for result.
+// Eval performs syntax analysis of the given form to produce an Expr and
+// evaluates the Expr for result.
 func (ins *Interpreter) Eval(form core.Any) (core.Any, error) {
 	return core.Eval(ins.env, ins.analyzer, form)
 }
 
-// EvalStr reads forms from the given string and evaluates it for
-// result.
+// EvalStr reads forms from the given string and evaluates it for result.
 func (ins *Interpreter) EvalStr(s string) (core.Any, error) {
 	if _, err := ins.buf.WriteString(s); err != nil {
 		return nil, err

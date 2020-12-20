@@ -41,6 +41,8 @@ What can you use it for?
 
 ![I've just received word that the Emperor has dissolved the MIT computer science program permanently.](https://imgs.xkcd.com/comics/lisp_cycles.png)
 
+Refer [./examples](./examples) for usage examples.
+
 ## Extending
 
 ### Reader

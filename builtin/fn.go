@@ -8,7 +8,10 @@ import (
 	"github.com/spy16/slurp/core"
 )
 
-var _ core.Invokable = (*Fn)(nil)
+var (
+	_ core.Invokable        = (*Fn)(nil)
+	_ core.EqualityProvider = (*Fn)(nil)
+)
 
 // Fn represents a multi-arity function definition. Fn implements
 // Invokable.
@@ -37,9 +40,9 @@ func (fn Fn) Invoke(args ...core.Any) (core.Any, error) {
 	return f.Body.Eval(fn.Env)
 }
 
-// Compare returns true if 'v' is also a MultiFn and all methods are
+// Equals returns true if 'v' is also a MultiFn and all methods are
 // equivalent.
-func (fn Fn) Compare(v core.Any) (bool, error) {
+func (fn Fn) Equals(v core.Any) (bool, error) {
 	other, ok := v.(Fn)
 	if !ok {
 		return false, nil

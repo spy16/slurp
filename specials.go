@@ -14,6 +14,7 @@ import (
 // fails due to malformed syntax.
 var ErrParseSpecial = errors.New("invalid special form")
 
+// parseDo parses the (do <expr>*) form and returns a DoExpr.
 func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	var de builtin.DoExpr
 	err := core.ForEach(args, func(item core.Any) (bool, error) {
@@ -30,6 +31,7 @@ func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	return de, nil
 }
 
+// parseIf parses the (if <test> <then> <else>?) form and returns IfExpr.
 func parseIf(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	count, err := args.Count()
 	if err != nil {
