@@ -127,7 +127,7 @@ func TestReader_All(t *testing.T) {
 	}{
 		{
 			name: "ValidLiteralSample",
-			src:  `123 "Hello World" 12.34 -0xF +010 true nil 0b1010 \a :hello`,
+			src:  `123 "Hello World" 12.34 -0xF +010 true nil 0b1010 \a :hello [:foo "bar"]`,
 			want: []core.Any{
 				builtin.Int64(123),
 				builtin.String("Hello World"),
@@ -139,6 +139,7 @@ func TestReader_All(t *testing.T) {
 				builtin.Int64(10),
 				builtin.Char('a'),
 				builtin.Keyword("hello"),
+				builtin.NewVector(builtin.Keyword("foo"), builtin.String("bar")),
 			},
 		},
 		{
@@ -586,67 +587,67 @@ func TestReader_One_List(t *testing.T) {
 	})
 }
 
-// func TestReader_One_Vector(t *testing.T) {
-// 	executeReaderTests(t, []readerTestCase{
-// 		{
-// 			name: "EmptyVector",
-// 			src:  `[]`,
-// 			want: builtin.Vector{},
-// 		},
-// 		{
-// 			name: "VectorWithOneEntry",
-// 			src:  `[help]`,
-// 			want: builtin.Vector{builtin.Symbol("help")},
-// 		},
-// 		{
-// 			name: "VectorWithMultipleEntry",
-// 			src:  `[+ 0xF 3.1413]`,
-// 			want: builtin.Vector{
-// 				builtin.Symbol("+"),
-// 				builtin.Int64(15),
-// 				builtin.Float64(3.1413),
-// 			},
-// 		},
-// 		{
-// 			name: "VectorWithCommaSeparator",
-// 			src:  `[+,0xF,3.1413]`,
-// 			want: builtin.Vector{
-// 				builtin.Symbol("+"),
-// 				builtin.Int64(15),
-// 				builtin.Float64(3.1413),
-// 			},
-// 		},
-// 		{
-// 			name: "MultiLine",
-// 			src: `[+
-//                       0xF
-//                       3.1413
-// 					]`,
-// 			want: builtin.Vector{
-// 				builtin.Symbol("+"),
-// 				builtin.Int64(15),
-// 				builtin.Float64(3.1413),
-// 			},
-// 		},
-// 		{
-// 			name: "MultiLineWithComments",
-// 			src: `[+         ; plus operator adds numerical values
-//                       0xF    ; hex representation of 15
-//                       3.1413 ; value of math constant pi
-//                   ]`,
-// 			want: builtin.Vector{
-// 				builtin.Symbol("+"),
-// 				builtin.Int64(15),
-// 				builtin.Float64(3.1413),
-// 			},
-// 		},
-// 		{
-// 			name:    "UnexpectedEOF",
-// 			src:     "[+ 1 2 ",
-// 			wantErr: true,
-// 		},
-// 	})
-// }
+func TestReader_One_Vector(t *testing.T) {
+	executeReaderTests(t, []readerTestCase{
+		{
+			name: "EmptyVector",
+			src:  `[]`,
+			want: builtin.EmptyVector,
+		},
+		{
+			name: "VectorWithOneEntry",
+			src:  `[help]`,
+			want: builtin.NewVector(builtin.Symbol("help")),
+		},
+		{
+			name: "VectorWithMultipleEntry",
+			src:  `[+ 0xF 3.1413]`,
+			want: builtin.NewVector(
+				builtin.Symbol("+"),
+				builtin.Int64(15),
+				builtin.Float64(3.1413),
+			),
+		},
+		{
+			name: "VectorWithCommaSeparator",
+			src:  `[+,0xF,3.1413]`,
+			want: builtin.NewVector(
+				builtin.Symbol("+"),
+				builtin.Int64(15),
+				builtin.Float64(3.1413),
+			),
+		},
+		{
+			name: "MultiLine",
+			src: `[+
+                      0xF
+                      3.1413
+					]`,
+			want: builtin.NewVector(
+				builtin.Symbol("+"),
+				builtin.Int64(15),
+				builtin.Float64(3.1413),
+			),
+		},
+		{
+			name: "MultiLineWithComments",
+			src: `[+         ; plus operator adds numerical values
+                      0xF    ; hex representation of 15
+                      3.1413 ; value of math constant pi
+                  ]`,
+			want: builtin.NewVector(
+				builtin.Symbol("+"),
+				builtin.Int64(15),
+				builtin.Float64(3.1413),
+			),
+		},
+		{
+			name:    "UnexpectedEOF",
+			src:     "[+ 1 2 ",
+			wantErr: true,
+		},
+	})
+}
 
 type readerTestCase struct {
 	name    string
