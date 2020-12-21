@@ -63,7 +63,7 @@ Slurp requires Go 1.14 or higher.  It can be installed using `go get`:
 go get -u github.com/spy16/slurp
 ```
 
-First-time users should visit the ["Getting Started" Tutorial](https://github.com/spy16/slurp/wiki/Getting-Started)
+First-time users should visit the ["Getting Started" Tutorial](https://github.com/spy16/slurp/wiki/Getting-Started).
 
 What can you use it for?
 
