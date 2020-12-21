@@ -262,6 +262,45 @@ func TestInvokeExpr_Eval(t *testing.T) {
 	})
 }
 
+func TestVectorExpr_Eval(t *testing.T) {
+	t.Run("ConstMembers", func(t *testing.T) {
+		vec := NewVector(Keyword("foo"))
+
+		any, err := (VectorExpr{
+			Analyzer: &Analyzer{},
+			Vector:   vec,
+		}).Eval(nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, any)
+		assert.IsType(t, PersistentVector{}, any)
+		assert.Equal(t, NewVector(Keyword("foo")), any)
+
+		any, err = any.(core.Vector).EntryAt(0)
+		assert.NoError(t, err)
+		assert.Equal(t, Keyword("foo"), any)
+	})
+
+	t.Run("SymbolMember", func(t *testing.T) {
+		env := core.New(map[string]core.Any{"foo": Keyword("foo")})
+		vec := NewVector(Symbol("foo"))
+
+		any, err := (VectorExpr{
+			Analyzer: &Analyzer{},
+			Vector:   vec,
+		}).Eval(env)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, any)
+		assert.IsType(t, PersistentVector{}, any)
+		assert.Equal(t, NewVector(Keyword("foo")), any)
+
+		any, err = any.(core.Vector).EntryAt(0)
+		assert.NoError(t, err)
+		assert.Equal(t, Keyword("foo"), any)
+	})
+}
+
 func runExprTests(t *testing.T, table []exprTest) {
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
