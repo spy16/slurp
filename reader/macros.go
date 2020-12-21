@@ -270,8 +270,10 @@ func readVector(rd *Reader, _ rune) (core.Any, error) {
 	const vecEnd = ']'
 
 	v := builtin.EmptyVector.Transient()
-	return v.Persistent(), rd.Container(vecEnd, "Vector", func(val core.Any) error {
+	err := rd.Container(vecEnd, "Vector", func(val core.Any) error {
 		v.Cons(val)
 		return nil
 	})
+
+	return v.Persistent(), err
 }
