@@ -299,6 +299,18 @@ func TestVectorExpr_Eval(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, Keyword("foo"), any)
 	})
+
+	t.Run("UnboundSymbolMember", func(t *testing.T) {
+		vec := NewVector(Symbol("foo"), Symbol("bar"), Symbol("baz"))
+
+		any, err := (VectorExpr{
+			Analyzer: &Analyzer{},
+			Vector:   vec,
+		}).Eval(core.New(nil))
+
+		assert.Error(t, err)
+		assert.Nil(t, any)
+	})
 }
 
 func runExprTests(t *testing.T, table []exprTest) {
