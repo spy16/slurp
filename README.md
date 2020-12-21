@@ -49,6 +49,7 @@ We hope that you will find Slurp to be powerful, useful and fun to use.  We look
   1. simple literals  (e.g., `\a` for `a`)
   2. special literals (e.g., `\newline`, `\tab` etc.)
   3. unicode literals (e.g., `\u00A5` for `¥` etc.)
+* Full interoperability with Go:  call native Go functions/libraries, and manipulate native Go datatypes from your language.
 * Support for macros.
 * Easy to extend. See [Extending](#extending).
 * Tiny & powerful REPL package.
