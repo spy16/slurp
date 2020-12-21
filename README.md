@@ -9,9 +9,7 @@ Slurp is a highly customisable, embeddable LISP toolkit for `Go` applications.
   - [Why Slurp](#why-slurp)
   - [Features](#features)
   - [Usage](#usage)
-  - [Extending](#extending)
-    - [Reader](#reader)
-    - [Evaluation](#evaluation)
+  - [Documentation](#documentation)
 
 ## Why Slurp
 
@@ -63,8 +61,6 @@ Slurp requires Go 1.14 or higher.  It can be installed using `go get`:
 go get -u github.com/spy16/slurp
 ```
 
-First-time users should visit the ["Getting Started" Tutorial](https://github.com/spy16/slurp/wiki/Getting-Started).
-
 What can you use it for?
 
 1. Embedded script engine to provide dynamic behavior without requiring re-compilation of your application ([example](./examples/simple/main.go)).
@@ -74,41 +70,11 @@ What can you use it for?
 
 Refer [./examples](./examples) for more usage examples.
 
-## Extending
+## Documentation
 
-### Reader
+In addition to the GoDocs, we maintain in-depth tutorials on the GitHub wiki.  The following
+pages are good starting points:
 
-slurp reader is inspired by Clojure reader and uses a _read table_. Reader can be extended
-to add new syntactical features by adding _reader macros_ to the _read table_. _Reader Macros_
-are implementations of `reader.Macro` function type. All syntax that reader can read are
-implemented using _Reader Macros_. Use `SetMacro()` method of `reader.Reader` to override or
-add a custom reader or dispatch macro.
-
-Reader returned by `reader.New(...)`, is configured to support following forms:
-
-* Numbers:
-  * Integers use `int64` Go representation and can be specified using decimal, binary
-    hexadecimal or radix notations. (e.g., 123, -123, 0b101011, 0xAF, 2r10100, 8r126 etc.)
-  * Floating point numbers use `float64` Go representation and can be specified using
-    decimal notation or scientific notation. (e.g.: 3.1412, -1.234, 1e-5, 2e3, 1.5e3 etc.)
-  * You can override number reader using `WithNumReader()`.
-* Characters: Characters use `rune` or `uint8` Go representation and can be written in 3 ways:
-  * Simple: `\a`, `\λ`, `\β` etc.
-  * Special: `\newline`, `\tab` etc.
-  * Unicode: `\u1267`
-* Boolean: `true` or `false` are converted to `Bool` type.
-* Nil: `nil` is represented as a zero-allocation empty struct in Go.
-* Keywords: Keywords represent symbolic data and start with `:`. (e.g., `:foo`)
-* Symbols: Symbols can be used to name a value and can contain any Unicode symbol.
-* Lists: Lists are zero or more forms contained within parentheses. (e.g., `(1 2 3)`, `(1 :hello ())`).
-
-### Evaluation
-
-Slurp uses implementation of `core.Env` as the environment for evaluating
-forms. A form is first analyzed using a `core.Analyzer` to produce `core.Expr`
-that can be evaluated against an Env. Custom implementations for all of
-these can be provided to optimise performance, customise evaluation rules
-or support additional features.
-
-A builtin Analyzer is provided which supports pure lisp forms with support
-for macros as well.
+1. [Getting Started](https://github.com/spy16/slurp/wiki/Getting-Started)
+2. [Customizing Syntax](https://github.com/spy16/slurp/wiki/Customizing-Syntax#Custom-Parsing)
+3. [Customizing Evaluation](https://github.com/spy16/slurp/wiki/Customizing-Syntax#Custom-Evaluation)
