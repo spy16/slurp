@@ -31,13 +31,14 @@ func (fn Fn) Invoke(args ...core.Any) (core.Any, error) {
 		return nil, err
 	}
 
+	env := fn.Env.Child(fn.Name, nil)
 	for i, p := range f.Params {
-		if err := fn.Env.Bind(p, args[i]); err != nil {
+		if err := env.Bind(p, args[i]); err != nil {
 			return nil, err
 		}
 	}
 
-	return f.Body.Eval(fn.Env)
+	return f.Body.Eval(env)
 }
 
 // Equals returns true if 'v' is also a MultiFn and all methods are
