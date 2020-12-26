@@ -29,11 +29,8 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	}
 
 	exp, err := macroExpand(ba, env, form)
-	if err != nil {
-		if !errors.Is(err, ErrNoExpand) {
-			return nil, err
-		}
-		exp = form
+	if err != nil && !errors.Is(err, ErrNoExpand) {
+		return nil, err
 	}
 
 	switch f := exp.(type) {
@@ -99,9 +96,19 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 }
 
 func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error) {
+	res, err := macroExpand1(env, form)
+	if errors.Is(err, ErrNoExpand) {
+		return res, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return a.Analyze(env, res)
+}
+
+func macroExpand1(env core.Env, form core.Any) (core.Any, error) {
 	lst, ok := form.(core.Seq)
 	if !ok {
-		return nil, ErrNoExpand
+		return form, ErrNoExpand
 	}
 
 	first, err := lst.First()
@@ -114,14 +121,14 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 	if ok {
 		v, err := ResolveExpr{Symbol: sym}.Eval(env)
 		if err != nil {
-			return nil, ErrNoExpand
+			return form, ErrNoExpand
 		}
 		target = v
 	}
 
 	fn, ok := target.(Fn)
 	if !ok || !fn.Macro {
-		return nil, ErrNoExpand
+		return form, ErrNoExpand
 	}
 
 	sl, err := core.ToSlice(lst)
@@ -129,9 +136,5 @@ func macroExpand(a core.Analyzer, env core.Env, form core.Any) (core.Any, error)
 		return nil, err
 	}
 
-	res, err := fn.Invoke(sl[1:]...)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return fn.Invoke(sl[1:]...)
 }

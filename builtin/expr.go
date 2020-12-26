@@ -154,6 +154,11 @@ func (ie InvokeExpr) Eval(env core.Env) (core.Any, error) {
 	val, err := ie.Target.Eval(env)
 	if err != nil {
 		return nil, err
+	} else if val == nil {
+		return nil, core.Error{
+			Cause:   core.ErrNotInvokable,
+			Message: "'nil'",
+		}
 	}
 
 	fn, ok := val.(core.Invokable)
