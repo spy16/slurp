@@ -12,21 +12,6 @@ import (
 	"github.com/spy16/slurp/reader"
 )
 
-// New returns a new instance of REPL with given slurp Env. Option values
-// can be used to configure REPL input, output etc.
-func New(exec Evaluator, opts ...Option) *REPL {
-	repl := &REPL{
-		exec:      exec,
-		currentNS: func() string { return "" },
-	}
-
-	for _, option := range withDefaults(opts) {
-		option(repl)
-	}
-
-	return repl
-}
-
 // Evaluator implementation is responsible for executing givenn forms.
 type Evaluator interface {
 	Eval(form core.Any) (core.Any, error)
@@ -36,23 +21,29 @@ type Evaluator interface {
 type REPL struct {
 	exec        Evaluator
 	input       Input
-	output      io.Writer
+	output      Printer
 	mapInputErr ErrMapper
-	currentNS   func() string
 	factory     ReaderFactory
 
-	banner      string
+	banner string
+
+	prompter    Prompter
 	prompt      string
 	multiPrompt string
-
-	printer Printer
 }
 
-// Input implementation is used by REPL to read user-input. See WithInput()
-// REPL option to configure an Input.
-type Input interface {
-	SetPrompt(string)
-	Readline() (string, error)
+// New returns a new instance of REPL with given slurp Env. Option values
+// can be used to configure REPL input, output etc.
+func New(exec Evaluator, opts ...Option) *REPL {
+	repl := &REPL{exec: exec}
+
+	for _, option := range withDefaults(opts) {
+		option(repl)
+	}
+
+	repl.prompter, _ = repl.input.(Prompter)
+
+	return repl
 }
 
 // Loop starts the read-eval-print loop. Loop runs until context is cancelled
@@ -81,7 +72,7 @@ func (repl *REPL) readEvalPrint() error {
 	if err != nil {
 		switch err.(type) {
 		case reader.Error:
-			_ = repl.print(err)
+			_ = repl.output.Print(err)
 		default:
 			return err
 		}
@@ -93,25 +84,13 @@ func (repl *REPL) readEvalPrint() error {
 
 	res, err := evalAll(repl.exec, forms)
 	if err != nil {
-		return repl.print(err)
+		return repl.output.Print(err)
 	}
 	if len(res) == 0 {
-		return repl.print(nil)
+		return repl.output.Print(nil)
 	}
 
-	return repl.print(res[len(res)-1])
-}
-
-func (repl *REPL) Write(b []byte) (int, error) {
-	return repl.output.Write(b)
-}
-
-func (repl *REPL) print(v interface{}) error {
-	if e, ok := v.(reader.Error); ok {
-		s := fmt.Sprintf("%v (begin=%s, end=%s)", e, e.Begin, e.End)
-		return repl.printer.Fprintln(repl.output, s)
-	}
-	return repl.printer.Fprintln(repl.output, v)
+	return repl.output.Print(res[len(res)-1])
 }
 
 func (repl *REPL) read() ([]core.Any, error) {
@@ -122,8 +101,7 @@ func (repl *REPL) read() ([]core.Any, error) {
 		repl.setPrompt(lineNo > 1)
 
 		line, err := repl.input.Readline()
-		err = repl.mapInputErr(err)
-		if err != nil {
+		if err = repl.mapInputErr(err); err != nil {
 			return nil, err
 		}
 
@@ -134,7 +112,7 @@ func (repl *REPL) read() ([]core.Any, error) {
 		}
 
 		rd := repl.factory.NewReader(strings.NewReader(src))
-		rd.File = "REPL"
+		rd.File = "<REPL>"
 
 		form, err := rd.All()
 		if err != nil {
@@ -150,8 +128,12 @@ func (repl *REPL) read() ([]core.Any, error) {
 	}
 }
 
+func (repl *REPL) currentNS() string {
+	return "" // stub
+}
+
 func (repl *REPL) setPrompt(multiline bool) {
-	if repl.prompt == "" {
+	if repl.prompter == nil || repl.prompt == "" {
 		return
 	}
 
@@ -163,7 +145,7 @@ func (repl *REPL) setPrompt(multiline bool) {
 		prompt = repl.multiPrompt
 	}
 
-	repl.input.SetPrompt(fmt.Sprintf("%s%s ", nsPrefix, prompt))
+	repl.prompter.Prompt(fmt.Sprintf("%s%s ", nsPrefix, prompt))
 }
 
 func (repl *REPL) printBanner() {

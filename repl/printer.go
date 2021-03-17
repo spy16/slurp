@@ -3,52 +3,49 @@ package repl
 import (
 	"fmt"
 	"io"
+	"os"
 )
 
 // Printer can print arbitrary values to output.
 type Printer interface {
-	Fprintln(w io.Writer, val interface{}) error
+	Print(interface{}) error
 }
 
-// BasicPrinter prints the value using fmt.Println.  It applies no special formatting.
-type BasicPrinter struct{}
+// BasicPrinter prints the value using fmt.Println.
+// It applies no special formatting.
+type BasicPrinter struct{ Out, Err io.Writer }
 
-// Fprintln prints val to w.
-func (p BasicPrinter) Fprintln(w io.Writer, val interface{}) error {
-	_, err := fmt.Fprintln(w, val)
+// Print v.
+func (p *BasicPrinter) Print(v interface{}) error {
+	if p.Out == nil {
+		p.Out = os.Stdout
+		p.Err = os.Stderr
+	}
+
+	if err, ok := v.(error); ok {
+		_, err := fmt.Fprintln(p.Err, err)
+		return err
+	}
+
+	_, err := fmt.Fprintln(p.Out, v)
 	return err
 }
 
-// Renderer pretty-prints the value.  It checks if the value implements any of the
-// following interfaces (in decreasing order of preference) before printing the default
-// Go value.
-//
-//  1. fmt.Formatter
-//  2. fmt.Stringer
-//  3. SExpr
-type Renderer struct{}
+// Renderer pretty-prints the value.
+type Renderer struct{ Out, Err io.Writer }
 
-// SExpr can render a parsable s-expression.
-type SExpr interface {
-	// SExpr returns a string representation of the value, suitable for parsing with
-	// reader.Reader.
-	SExpr() (string, error)
-}
+// Print prints val to w.
+func (r *Renderer) Print(val interface{}) (err error) {
+	if r.Out == nil {
+		r.Out = os.Stdout
+		r.Err = os.Stderr
+	}
 
-// Fprintln prints val to w.
-func (r Renderer) Fprintln(w io.Writer, val interface{}) (err error) {
-	switch v := val.(type) {
-	case fmt.Formatter:
-		_, err = fmt.Fprintf(w, "%+v\n", v)
-	case fmt.Stringer:
-		_, err = fmt.Fprintf(w, "%s\n", v)
-	case SExpr:
-		var s string
-		if s, err = v.SExpr(); err == nil {
-			_, err = fmt.Fprintln(w, s)
-		}
+	switch val.(type) {
+	case error:
+		_, err = fmt.Fprintf(r.Err, "%#v\n", val)
 	default:
-		_, err = fmt.Fprintf(w, "%v\n", val)
+		_, err = fmt.Fprintf(r.Out, "%#v\n", val)
 	}
 
 	return
