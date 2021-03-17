@@ -56,6 +56,26 @@ func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 	return Symbol(de.Name), nil
 }
 
+// LetExpr represents the (let [param*] expr*) binding form.
+type LetExpr struct {
+	Names  []string
+	Values []core.Expr
+	Exprs  DoExpr
+}
+
+// Eval creates binds name-value pair to a child environment, and
+// then evaluates the expressions.
+func (le LetExpr) Eval(env core.Env) (_ core.Any, err error) {
+	bs := make(map[string]core.Any, len(le.Names))
+	for i, symbol := range le.Names {
+		if bs[symbol], err = le.Values[i].Eval(env); err != nil {
+			return
+		}
+	}
+
+	return le.Exprs.Eval(env.Child("<let>", bs))
+}
+
 // IfExpr represents the if-then-else form.
 type IfExpr struct{ Test, Then, Else core.Expr }
 
@@ -80,7 +100,7 @@ func (ife IfExpr) Eval(env core.Env) (core.Any, error) {
 }
 
 // DoExpr represents the (do expr*) form.
-type DoExpr struct{ Exprs []core.Expr }
+type DoExpr []core.Expr
 
 // Eval evaluates each expr in the do form in the order and returns the
 // result of the last eval.
@@ -88,7 +108,7 @@ func (de DoExpr) Eval(env core.Env) (core.Any, error) {
 	var res core.Any
 	var err error
 
-	for _, expr := range de.Exprs {
+	for _, expr := range de {
 		res, err = expr.Eval(env)
 		if err != nil {
 			return nil, err

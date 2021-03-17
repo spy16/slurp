@@ -97,6 +97,7 @@ func WithAnalyzer(a core.Analyzer) Option {
 					"if":    parseIf,
 					"fn":    parseFn,
 					"def":   parseDef,
+					"let":   parseLet,
 					"macro": parseMacro,
 					"quote": parseQuote,
 				},

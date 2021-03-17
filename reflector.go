@@ -92,7 +92,7 @@ type funcWrapper struct {
 func (fw *funcWrapper) Invoke(args ...core.Any) (core.Any, error) {
 	// allocate argument slice.
 	argCount := len(args)
-	argVals := make([]reflect.Value, argCount, argCount)
+	argVals := make([]reflect.Value, argCount)
 
 	// populate reflect.Value version of each argument.
 	for i, arg := range args {
@@ -205,7 +205,7 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 	}
 
 	retValCount := len(vals[0 : fw.lastOutIdx+1])
-	wrapped := make([]core.Any, retValCount, retValCount)
+	wrapped := make([]core.Any, retValCount)
 	for i := 0; i < retValCount; i++ {
 		wrapped[i] = vals[i].Interface()
 	}
@@ -218,7 +218,7 @@ func (fw *funcWrapper) wrapReturns(vals ...reflect.Value) (core.Any, error) {
 }
 
 func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Value, error) {
-	converted := make([]reflect.Value, len(args), len(args))
+	converted := make([]reflect.Value, len(args))
 	for i, arg := range args {
 		actual := arg.Type()
 		isAssignable := (actual == expected) ||
@@ -237,20 +237,4 @@ func convertArgsTo(expected reflect.Type, args ...reflect.Value) ([]reflect.Valu
 	}
 
 	return converted, nil
-}
-
-func reflectValues(args []core.Any) []reflect.Value {
-	var rvs []reflect.Value
-	for _, arg := range args {
-		rvs = append(rvs, reflect.ValueOf(arg))
-	}
-	return rvs
-}
-
-func slurpValues(rvs []reflect.Value) []core.Any {
-	var vals []core.Any
-	for _, arg := range rvs {
-		vals = append(vals, arg.Interface())
-	}
-	return vals
 }

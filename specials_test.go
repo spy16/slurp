@@ -2,11 +2,12 @@ package slurp
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parseFn(t *testing.T) {
@@ -30,16 +31,16 @@ func Test_parseFn(t *testing.T) {
 			env:   core.New(nil),
 			args:  builtin.NewList(builtin.NewList()),
 			assert: func(t *testing.T, got core.Expr, err error) {
-				ce, ok := got.(builtin.ConstExpr)
-				assert(t, ok, "expected ConstExpr, got %#v", got)
-				assert(t, ce.Const != nil, "expected Const to be not nil")
+				require.IsType(t, builtin.ConstExpr{}, got)
+				ce := got.(builtin.ConstExpr)
 
-				fn, ok := ce.Const.(builtin.Fn)
-				assert(t, ok, "expected Const to be Fn, got %#v", ce.Const)
-				assert(t, fn.Name == "", "unexpected name: %s", fn.Name)
-				assert(t, fn.Doc == "", "unexpected doc: %s", fn.Doc)
-				assert(t, fn.Env != nil, "Env not set on Fn")
-				assert(t, len(fn.Funcs) == 1, "expected only one method, got %d", len(fn.Funcs))
+				require.IsType(t, builtin.Fn{}, ce.Const)
+				fn := ce.Const.(builtin.Fn)
+
+				require.Empty(t, fn.Name, "unexpected name: %s", fn.Name)
+				require.Empty(t, fn.Doc, "unexpected doc: %s", fn.Doc)
+				require.NotNil(t, fn.Env, "Env not set on Fn")
+				require.Len(t, fn.Funcs, 1, "expected only one method")
 			},
 		},
 		{
@@ -51,16 +52,16 @@ func Test_parseFn(t *testing.T) {
 				builtin.NewList(),
 			),
 			assert: func(t *testing.T, got core.Expr, err error) {
-				ce, ok := got.(builtin.ConstExpr)
-				assert(t, ok, "expected ConstExpr, got %#v", got)
-				assert(t, ce.Const != nil, "expected Const to be not nil")
+				require.IsType(t, builtin.ConstExpr{}, got)
+				ce := got.(builtin.ConstExpr)
 
-				fn, ok := ce.Const.(builtin.Fn)
-				assert(t, ok, "expected Const to be Fn, got %#v", ce.Const)
-				assert(t, fn.Name == "foo", "unexpected name: %s", fn.Name)
-				assert(t, fn.Doc == "hello", "unexpected doc: %s", fn.Doc)
-				assert(t, fn.Env != nil, "Env not set on Fn")
-				assert(t, len(fn.Funcs) == 1, "expected only one method, got %d", len(fn.Funcs))
+				require.IsType(t, builtin.Fn{}, ce.Const)
+				fn := ce.Const.(builtin.Fn)
+
+				require.Equal(t, "foo", fn.Name, "unexpected name: %s", fn.Name)
+				require.Equal(t, "hello", fn.Doc, "unexpected doc: %s", fn.Doc)
+				require.NotNil(t, fn.Env, "Env not set on Fn")
+				require.Len(t, fn.Funcs, 1, "expected only one method")
 			},
 		},
 		{
@@ -72,16 +73,16 @@ func Test_parseFn(t *testing.T) {
 				builtin.NewList(builtin.Symbol("do"), 1, 2),
 			),
 			assert: func(t *testing.T, got core.Expr, err error) {
-				ce, ok := got.(builtin.ConstExpr)
-				assert(t, ok, "expected ConstExpr, got %#v", got)
-				assert(t, ce.Const != nil, "expected Const to be not nil")
+				require.IsType(t, builtin.ConstExpr{}, got)
+				ce := got.(builtin.ConstExpr)
 
-				fn, ok := ce.Const.(builtin.Fn)
-				assert(t, ok, "expected Const to be Fn, got %#v", ce.Const)
-				assert(t, fn.Name == "foo", "unexpected name: %s", fn.Name)
-				assert(t, fn.Doc == "", "unexpected doc: %s", fn.Doc)
-				assert(t, fn.Env != nil, "Env not set on Fn")
-				assert(t, len(fn.Funcs) == 1, "expected only one method, got %d", len(fn.Funcs))
+				require.IsType(t, builtin.Fn{}, ce.Const)
+				fn := ce.Const.(builtin.Fn)
+
+				require.Equal(t, "foo", fn.Name, "unexpected name: %s", fn.Name)
+				require.Empty(t, fn.Doc, "unexpected doc: %s", fn.Doc)
+				require.NotNil(t, fn.Env, "Env not set on Fn")
+				require.Len(t, fn.Funcs, 1, "expected only one method")
 			},
 		},
 	}
@@ -103,8 +104,7 @@ func Test_parseDo(t *testing.T) {
 			env:   core.New(nil),
 			args:  nil,
 			assert: func(t *testing.T, got core.Expr, err error) {
-				want := builtin.DoExpr{}
-				assert(t, reflect.DeepEqual(want, got), "want=%#v\ngot=%#v", want, got)
+				assert.Equal(t, got, builtin.DoExpr(nil))
 			},
 		},
 		{
@@ -113,12 +113,10 @@ func Test_parseDo(t *testing.T) {
 			args:  builtin.NewList(1, 2),
 			assert: func(t *testing.T, got core.Expr, err error) {
 				want := builtin.DoExpr{
-					Exprs: []core.Expr{
-						builtin.ConstExpr{Const: 1},
-						builtin.ConstExpr{Const: 2},
-					},
+					builtin.ConstExpr{Const: 1},
+					builtin.ConstExpr{Const: 2},
 				}
-				assert(t, reflect.DeepEqual(want, got), "want=%#v\ngot=%#v", want, got)
+				assert.Equal(t, got, want)
 			},
 		},
 		{
@@ -158,7 +156,7 @@ func Test_parseDef(t *testing.T) {
 					Name:  "foo",
 					Value: builtin.ConstExpr{Const: 100},
 				}
-				assert(t, reflect.DeepEqual(want, got), "want=%#v\ngot=%#v", want, got)
+				assert.Equal(t, want, got)
 			},
 		},
 	}
@@ -171,11 +169,65 @@ func Test_parseDef(t *testing.T) {
 	}
 }
 
+func Test_parseLet(t *testing.T) {
+	t.Parallel()
+
+	table := []specialTest{
+		{
+			title:   "NilArgs",
+			wantErr: ErrParseSpecial,
+		},
+		{
+			title:   "EmptyArgs",
+			args:    builtin.NewList(),
+			wantErr: ErrParseSpecial,
+		},
+		{
+			title: "ValidList",
+			args: builtin.NewList(
+				builtin.NewList(builtin.Symbol("x"), builtin.Int64(42)),
+				builtin.Symbol("x"), // expr; return value of 'x'
+			),
+			assert: func(t *testing.T, got core.Expr, err error) {
+				want := builtin.LetExpr{
+					Names:  []string{"x"},
+					Values: []core.Expr{builtin.ConstExpr{Const: builtin.Int64(42)}},
+					Exprs:  builtin.DoExpr{builtin.ResolveExpr{Symbol: "x"}},
+				}
+
+				assert.Equal(t, want, got)
+			},
+		},
+		{
+			title: "ValidVector",
+			args: builtin.NewList(
+				builtin.NewVector(builtin.Symbol("x"), builtin.Int64(42)),
+				builtin.Symbol("x"), // expr; return value of 'x'
+			),
+			assert: func(t *testing.T, got core.Expr, err error) {
+				want := builtin.LetExpr{
+					Names:  []string{"x"},
+					Values: []core.Expr{builtin.ConstExpr{Const: builtin.Int64(42)}},
+					Exprs:  builtin.DoExpr{builtin.ResolveExpr{Symbol: "x"}},
+				}
+
+				assert.Equal(t, want, got)
+			},
+		},
+	}
+
+	for _, tt := range table {
+		t.Run(tt.title, func(t *testing.T) {
+			tt.env = core.New(nil)
+			runSpecialTest(t, tt, parseLet)
+		})
+	}
+}
+
 type specialTest struct {
 	title   string
 	env     core.Env
 	args    core.Seq
-	want    core.Expr
 	wantErr error
 	assert  func(t *testing.T, got core.Expr, err error)
 }
@@ -188,26 +240,21 @@ func runSpecialTest(t *testing.T, tt specialTest, parse builtin.ParseSpecial) {
 			"if":    parseIf,
 			"fn":    parseFn,
 			"def":   parseDef,
+			"let":   parseLet,
 			"macro": parseMacro,
 			"quote": parseQuote,
 		},
 	}
 	got, err := parse(a, tt.env, tt.args)
 	if tt.wantErr != nil {
-		assert(t, sameErr(err, tt.wantErr),
-			"wantErr=%#v\ngotErr=%#v", tt.wantErr, err)
-		assert(t, got == nil, "expecting nil, got %#v", got)
+		// require.ErrorIs does not capture different errors with same value.
+		if err.Error() != tt.wantErr.Error() {
+			require.ErrorIs(t, err, tt.wantErr)
+		}
 	} else {
-		assert(t, err == nil, "unexpected err: %#v", err)
+		require.NoError(t, err)
 	}
 	if tt.assert != nil {
 		tt.assert(t, got, err)
 	}
-}
-
-func sameErr(e1, e2 error) bool {
-	return e1 == e2 ||
-		errors.Is(e1, e2) ||
-		errors.Is(e2, e1) ||
-		reflect.DeepEqual(e1, e2)
 }
