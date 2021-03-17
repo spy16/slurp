@@ -42,33 +42,33 @@ func TestDoExpr_Eval(t *testing.T) {
 		{
 			title: "EmptyDo",
 			expr: func() (core.Expr, core.Env) {
-				return DoExpr{Exprs: nil}, nil
+				return DoExpr(nil), nil
 			},
 			want: Nil{},
 		},
 		{
 			title: "WithSingleExpr",
 			expr: func() (core.Expr, core.Env) {
-				return DoExpr{Exprs: []core.Expr{ConstExpr{Const: 10}}}, nil
+				return DoExpr{ConstExpr{Const: 10}}, nil
 			},
 			want: 10,
 		},
 		{
 			title: "ExprEvalFail",
 			expr: func() (core.Expr, core.Env) {
-				return DoExpr{Exprs: []core.Expr{
+				return DoExpr{
 					fakeExpr{Err: errUnknown},
-				}}, nil
+				}, nil
 			},
 			wantErr: errUnknown,
 		},
 		{
 			title: "MultipleExpr",
 			expr: func() (core.Expr, core.Env) {
-				return DoExpr{Exprs: []core.Expr{
+				return DoExpr{
 					ConstExpr{Const: 10},
 					ConstExpr{Const: "foo"},
-				}}, nil
+				}, nil
 			},
 			want: "foo",
 		},

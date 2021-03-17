@@ -22,7 +22,7 @@ func parseDo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		if err != nil {
 			return true, err
 		}
-		de.Exprs = append(de.Exprs, expr)
+		de = append(de, expr)
 		return false, nil
 	})
 	if err != nil {
@@ -131,6 +131,94 @@ func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		Name:  string(sym),
 		Value: res,
 	}, nil
+}
+
+func parseLet(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+
+	e := core.Error{Cause: fmt.Errorf("%w: def", ErrParseSpecial)}
+
+	if args == nil {
+		return nil, e.With("requires exactly 2 args, got 0")
+	}
+
+	cnt, err := args.Count()
+	if err != nil {
+		return nil, err
+	}
+	if cnt == 0 {
+		return nil, e.With("requires exactly 2 args, got 0")
+	}
+
+	var let builtin.LetExpr
+
+	// analyze bindings
+	bs, err := args.First()
+	if err != nil {
+		return nil, err
+	}
+
+	switch s := bs.(type) {
+	case core.Seq:
+		if err = parseLetBindings(a, env, s, &let); err != nil {
+			return nil, err
+		}
+
+	case core.Seqable:
+		seq, err := s.Seq()
+		if err != nil {
+			return nil, err
+		}
+		if err = parseLetBindings(a, env, seq, &let); err != nil {
+			return nil, err
+		}
+
+	default:
+		return nil, core.Error{
+			Cause:   fmt.Errorf("%w: let", ErrParseSpecial),
+			Message: fmt.Sprintf("%s is not a sequence type", reflect.TypeOf(bs)),
+		}
+	}
+
+	// analyze expressions
+	if args, err = args.Next(); err != nil {
+		return nil, err
+	}
+
+	err = core.ForEach(args, func(item core.Any) (bool, error) {
+		expr, err := a.Analyze(env, item)
+		if err == nil {
+			let.Exprs = append(let.Exprs, expr)
+		}
+		return false, err
+	})
+
+	return let, err
+}
+
+func parseLetBindings(a core.Analyzer, env core.Env, seq core.Seq, le *builtin.LetExpr) error {
+	return core.ForEach(seq, func(item core.Any) (bool, error) {
+		// symbol?
+		if len(le.Names)%2 == 0 {
+			s, ok := item.(builtin.Symbol)
+			if !ok {
+				return false, core.Error{
+					Cause:   fmt.Errorf("%w: let", ErrParseSpecial),
+					Message: fmt.Sprintf("expected symbol, got %s", reflect.TypeOf(item)),
+				}
+			}
+
+			le.Names = append(le.Names, string(s))
+			return false, nil
+		}
+
+		// it's a value
+		expr, err := a.Analyze(env, item)
+		if err == nil {
+			le.Values = append(le.Values, expr)
+		}
+
+		return false, err
+	})
 }
 
 func parseGo(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
