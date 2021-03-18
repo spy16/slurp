@@ -16,19 +16,19 @@ func Test_parseFn(t *testing.T) {
 	table := []specialTest{
 		{
 			title:   "NilArgs",
-			env:     core.New(nil),
+			env:     builtin.NewEnv(nil),
 			args:    nil,
 			wantErr: errors.New("nil argument sequence"),
 		},
 		{
 			title:   "EmptyArgSeq",
-			env:     core.New(nil),
+			env:     builtin.NewEnv(nil),
 			args:    builtin.NewList(),
 			wantErr: core.ErrArity,
 		},
 		{
 			title: "Arity0_Fn",
-			env:   core.New(nil),
+			env:   builtin.NewEnv(nil),
 			args:  builtin.NewList(builtin.NewList()),
 			assert: func(t *testing.T, got core.Expr, err error) {
 				require.IsType(t, builtin.ConstExpr{}, got)
@@ -45,7 +45,7 @@ func Test_parseFn(t *testing.T) {
 		},
 		{
 			title: "Arity0_Fn_WithNameDoc",
-			env:   core.New(nil),
+			env:   builtin.NewEnv(nil),
 			args: builtin.NewList(
 				builtin.Symbol("foo"),
 				builtin.String("hello"),
@@ -66,7 +66,7 @@ func Test_parseFn(t *testing.T) {
 		},
 		{
 			title: "Arity0_Fn_WithArgs",
-			env:   core.New(nil),
+			env:   builtin.NewEnv(nil),
 			args: builtin.NewList(
 				builtin.Symbol("foo"),
 				builtin.NewList(builtin.Symbol("a"), builtin.Symbol("b")),
@@ -89,7 +89,7 @@ func Test_parseFn(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = core.New(nil)
+			tt.env = builtin.NewEnv(nil)
 			runSpecialTest(t, tt, parseFn)
 		})
 	}
@@ -101,7 +101,7 @@ func Test_parseDo(t *testing.T) {
 	table := []specialTest{
 		{
 			title: "NilArgs",
-			env:   core.New(nil),
+			env:   builtin.NewEnv(nil),
 			args:  nil,
 			assert: func(t *testing.T, got core.Expr, err error) {
 				assert.Equal(t, got, builtin.DoExpr(nil))
@@ -109,7 +109,7 @@ func Test_parseDo(t *testing.T) {
 		},
 		{
 			title: "SomeArgs",
-			env:   core.New(nil),
+			env:   builtin.NewEnv(nil),
 			args:  builtin.NewList(1, 2),
 			assert: func(t *testing.T, got core.Expr, err error) {
 				want := builtin.DoExpr{
@@ -121,7 +121,7 @@ func Test_parseDo(t *testing.T) {
 		},
 		{
 			title:   "AnalyzeFail",
-			env:     core.New(nil),
+			env:     builtin.NewEnv(nil),
 			args:    builtin.NewList(1, builtin.NewList(builtin.Symbol("def"))),
 			wantErr: ErrParseSpecial,
 		},
@@ -163,7 +163,7 @@ func Test_parseDef(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = core.New(nil)
+			tt.env = builtin.NewEnv(nil)
 			runSpecialTest(t, tt, parseDef)
 		})
 	}
@@ -218,7 +218,7 @@ func Test_parseLet(t *testing.T) {
 
 	for _, tt := range table {
 		t.Run(tt.title, func(t *testing.T) {
-			tt.env = core.New(nil)
+			tt.env = builtin.NewEnv(nil)
 			runSpecialTest(t, tt, parseLet)
 		})
 	}

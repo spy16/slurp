@@ -14,7 +14,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	t.Parallel()
 
 	hundredFunc := fakeFn{}
-	e := core.New(map[string]core.Any{
+	e := builtin.NewEnv(map[string]core.Any{
 		"foo":     builtin.Keyword("hello"),
 		"hundred": hundredFunc,
 	})
@@ -83,7 +83,7 @@ func TestBultinAnalyzer_Analyze_Vector(t *testing.T) {
 	vec := builtin.NewVector(builtin.Symbol("foo"))
 
 	var ba builtin.Analyzer
-	expr, err := ba.Analyze(core.New(nil), vec)
+	expr, err := ba.Analyze(builtin.NewEnv(nil), vec)
 	require.NoError(t, err)
 	require.IsType(t, builtin.VectorExpr{}, expr)
 	assert.Equal(t, vec, expr.(builtin.VectorExpr).Vector)

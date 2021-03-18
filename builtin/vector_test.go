@@ -229,6 +229,7 @@ func TestPersistentVector(t *testing.T) {
 			i++
 			return false, nil
 		})
+		assert.NoError(t, err)
 	})
 }
 

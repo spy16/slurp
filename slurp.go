@@ -75,7 +75,7 @@ type Option func(eval *Evaluator)
 // env is nil, the default map-env will be used.
 func WithEnv(env core.Env) Option {
 	if env == nil {
-		env = core.New(nil)
+		env = builtin.NewEnv(nil)
 	}
 
 	ns, ok := env.(core.NamespaceProvider)

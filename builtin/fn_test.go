@@ -12,7 +12,7 @@ func TestFn_Invoke(t *testing.T) {
 	t.Parallel()
 
 	specimen := Fn{
-		Env:  core.New(nil),
+		Env:  NewEnv(nil),
 		Name: "foo",
 		Funcs: []Func{
 			{

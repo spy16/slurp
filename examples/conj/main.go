@@ -63,7 +63,7 @@ func conj(vs ...core.Any) (core.Any, error) {
 }
 
 func main() {
-	env := core.New(globals)
+	env := builtin.NewEnv(globals)
 	eval := slurp.New(slurp.WithEnv(env))
 
 	r := repl.New(eval,

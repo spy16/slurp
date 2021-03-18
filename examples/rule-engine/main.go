@@ -41,7 +41,7 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 		"current-user":        user,
 	}
 
-	env := core.New(globals)
+	env := builtin.NewEnv(globals)
 	eval := slurp.New(slurp.WithEnv(env))
 
 	shouldDiscount, err := eval.EvalStr(rule)
