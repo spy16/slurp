@@ -61,9 +61,7 @@ type Macro func(rd *Reader, init rune) (core.Any, error)
 // unmatched delimiters such as closing parenthesis etc.
 func UnmatchedDelimiter() Macro {
 	return func(rd *Reader, initRune rune) (core.Any, error) {
-		e := rd.annotateErr(ErrUnmatchedDelimiter, rd.Position(), "").(Error)
-		e.Rune = initRune
-		return nil, e
+		return nil, rd.annotateErr(unmatchedDelimiterError(initRune), rd.Position())
 	}
 }
 
@@ -73,7 +71,7 @@ func symbolReader(symTable map[string]core.Any) Macro {
 
 		s, err := rd.Token(init)
 		if err != nil {
-			return nil, rd.annotateErr(err, beginPos, s)
+			return nil, rd.annotateErr(err, beginPos)
 		}
 
 		if predefVal, found := symTable[s]; found {
@@ -98,33 +96,33 @@ func readNumber(rd *Reader, init rune) (core.Any, error) {
 
 	switch {
 	case isRadix && (decimalPoint || isScientific):
-		return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
+		return nil, rd.annotateErr(ErrNumberFormat, beginPos)
 
 	case isScientific:
 		v, err := parseScientific(numStr)
 		if err != nil {
-			return nil, rd.annotateErr(err, beginPos, numStr)
+			return nil, rd.annotateErr(err, beginPos)
 		}
 		return v, nil
 
 	case decimalPoint:
 		v, err := strconv.ParseFloat(numStr, 64)
 		if err != nil {
-			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
+			return nil, rd.annotateErr(ErrNumberFormat, beginPos)
 		}
 		return builtin.Float64(v), nil
 
 	case isRadix:
 		v, err := parseRadix(numStr)
 		if err != nil {
-			return nil, rd.annotateErr(err, beginPos, numStr)
+			return nil, rd.annotateErr(err, beginPos)
 		}
 		return v, nil
 
 	default:
 		v, err := strconv.ParseInt(numStr, 0, 64)
 		if err != nil {
-			return nil, rd.annotateErr(ErrNumberFormat, beginPos, numStr)
+			return nil, rd.annotateErr(ErrNumberFormat, beginPos)
 		}
 
 		return builtin.Int64(v), nil
@@ -141,7 +139,7 @@ func readString(rd *Reader, init rune) (core.Any, error) {
 			if errors.Is(err, io.EOF) {
 				err = ErrEOF
 			}
-			return nil, rd.annotateErr(err, beginPos, string(init)+b.String())
+			return nil, rd.annotateErr(err, beginPos)
 		}
 
 		if r == '\\' {
@@ -151,7 +149,7 @@ func readString(rd *Reader, init rune) (core.Any, error) {
 					err = ErrEOF
 				}
 
-				return nil, rd.annotateErr(err, beginPos, string(init)+b.String())
+				return nil, rd.annotateErr(err, beginPos)
 			}
 
 			// TODO: Support for Unicode escape \uNN format.
@@ -191,7 +189,7 @@ func readKeyword(rd *Reader, init rune) (core.Any, error) {
 
 	token, err := rd.Token(-1)
 	if err != nil {
-		return nil, rd.annotateErr(err, beginPos, token)
+		return nil, rd.annotateErr(err, beginPos)
 	}
 
 	return builtin.Keyword(token), nil
@@ -202,7 +200,7 @@ func readCharacter(rd *Reader, _ rune) (core.Any, error) {
 
 	r, err := rd.NextRune()
 	if err != nil {
-		return nil, rd.annotateErr(err, beginPos, "")
+		return nil, rd.annotateErr(err, beginPos)
 	}
 
 	token, err := rd.Token(r)
@@ -237,7 +235,7 @@ func readList(rd *Reader, _ rune) (core.Any, error) {
 		forms = append(forms, val)
 		return nil
 	}); err != nil {
-		return nil, rd.annotateErr(err, beginPos, "")
+		return nil, rd.annotateErr(err, beginPos)
 	}
 
 	return builtin.NewList(forms...), nil
@@ -249,12 +247,12 @@ func quoteFormReader(expandFunc string) Macro {
 		if err != nil {
 			if err == io.EOF {
 				return nil, Error{
-					Form:  expandFunc,
+					// Form:  expandFunc,
 					Cause: ErrEOF,
 				}
 			} else if err == ErrSkip {
 				return nil, Error{
-					Form:  expandFunc,
+					// Form:  expandFunc,
 					Cause: errors.New("cannot quote a no-op form"),
 				}
 			}

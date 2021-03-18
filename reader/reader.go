@@ -381,19 +381,17 @@ func (rd *Reader) execDispatch() (core.Any, error) {
 	return form, nil
 }
 
-func (rd *Reader) annotateErr(err error, beginPos Position, form string) error {
+func (rd *Reader) annotateErr(err error, beginPos Position /*, form string */) error {
 	if err == io.EOF || err == ErrSkip {
 		return err
 	}
 
-	readErr := Error{}
-	if e, ok := err.(Error); ok {
-		readErr = e
-	} else {
-		readErr = Error{Cause: err}
+	readErr, ok := err.(Error)
+	if !ok {
+		readErr.Cause = err
 	}
 
-	readErr.Form = form
+	// readErr.Form = form
 	readErr.Begin = beginPos
 	readErr.End = rd.Position()
 	return readErr
