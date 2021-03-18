@@ -1,5 +1,5 @@
-// Package slurp provides Interpreter that composes builtin implementations of
-// Env, Analyzer and Reader that supports a working LISP dialect.
+// Package slurp provides an Evaluator that composes builtin implementations of
+// Env, Analyzer and Reader to produce a minimal LISP dialect.
 package slurp
 
 import (
@@ -10,46 +10,48 @@ import (
 	"github.com/spy16/slurp/reader"
 )
 
-// New returns a new slurp interpreter session.
-func New(opts ...Option) *Interpreter {
-	buf := bytes.Buffer{}
-	ins := &Interpreter{
-		buf:    &buf,
-		reader: reader.New(&buf),
-	}
-
-	for _, opt := range withDefaults(opts) {
-		opt(ins)
-	}
-
-	return ins
-}
-
-// Option values can be used with New() to customise slurp instance
-// during initialisation.
-type Option func(ins *Interpreter)
-
-// Interpreter represents a Slurp interpreter session.
-type Interpreter struct {
+// Evaluator represents a Slurp Evaluator session.
+type Evaluator struct {
 	env      core.Env
 	buf      *bytes.Buffer
 	reader   *reader.Reader
 	analyzer core.Analyzer
+	ns       core.NamespaceProvider
 }
+
+// New slurp evaluator.
+func New(opt ...Option) *Evaluator {
+	var buf bytes.Buffer
+	eval := &Evaluator{
+		buf:    &buf,
+		reader: reader.New(&buf),
+	}
+
+	for _, opt := range withDefaults(opt) {
+		opt(eval)
+	}
+
+	return eval
+}
+
+// Namespace returns the current namespace.  It returns an empty string
+// if the environment does not support namespacing.
+func (eval Evaluator) Namespace() string { return eval.ns.Namespace() }
 
 // Eval performs syntax analysis of the given form to produce an Expr and
 // evaluates the Expr for result.
-func (ins *Interpreter) Eval(form core.Any) (core.Any, error) {
-	return core.Eval(ins.env, ins.analyzer, form)
+func (eval Evaluator) Eval(form core.Any) (core.Any, error) {
+	return core.Eval(eval.env, eval.analyzer, form)
 }
 
-// EvalStr reads forms from the given string and evaluates it for result.
-func (ins *Interpreter) EvalStr(s string) (core.Any, error) {
-	if _, err := ins.buf.WriteString(s); err != nil {
+// EvalStr reads forms from the given string, evaluates them, and returns
+// the final form's value (or any error encountered along the way).
+func (eval Evaluator) EvalStr(s string) (core.Any, error) {
+	if _, err := eval.buf.WriteString(s); err != nil {
 		return nil, err
 	}
 
-	f, err := ins.reader.All()
+	f, err := eval.reader.All()
 	if err != nil {
 		return nil, err
 	}
@@ -59,28 +61,28 @@ func (ins *Interpreter) EvalStr(s string) (core.Any, error) {
 		return nil, err
 	}
 
-	return ins.Eval(do)
+	return eval.Eval(do)
 }
 
-// Bind can be used to set global bindings that will be available while
-// executing forms.
-func (ins *Interpreter) Bind(vals map[string]core.Any) error {
-	for k, v := range vals {
-		if err := ins.env.Bind(k, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+// Option values can be used with New() to customise slurp instance
+// during initialisation.
+type Option func(eval *Evaluator)
 
 // WithEnv sets the environment to be used by the slurp instance. If
 // env is nil, the default map-env will be used.
 func WithEnv(env core.Env) Option {
-	return func(ins *Interpreter) {
-		if env == nil {
-			env = core.New(nil)
-		}
-		ins.env = env
+	if env == nil {
+		env = core.New(nil)
+	}
+
+	ns, ok := env.(core.NamespaceProvider)
+	if !ok {
+		ns = nopNS{}
+	}
+
+	return func(eval *Evaluator) {
+		eval.env = env
+		eval.ns = ns
 	}
 }
 
@@ -88,7 +90,7 @@ func WithEnv(env core.Env) Option {
 // syntax analysis and macro expansions. If nil, uses builtin analyzer
 // with standard special forms.
 func WithAnalyzer(a core.Analyzer) Option {
-	return func(ins *Interpreter) {
+	return func(eval *Evaluator) {
 		if a == nil {
 			a = &builtin.Analyzer{
 				Specials: map[string]builtin.ParseSpecial{
@@ -103,7 +105,7 @@ func WithAnalyzer(a core.Analyzer) Option {
 				},
 			}
 		}
-		ins.analyzer = a
+		eval.analyzer = a
 	}
 }
 
@@ -113,3 +115,7 @@ func withDefaults(opts []Option) []Option {
 		WithEnv(nil),
 	}, opts...)
 }
+
+type nopNS struct{}
+
+func (nopNS) Namespace() string { return "" }

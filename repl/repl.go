@@ -12,33 +12,18 @@ import (
 	"github.com/spy16/slurp/reader"
 )
 
-// New returns a new instance of REPL with given slurp Env. Option values
-// can be used to configure REPL input, output etc.
-func New(exec Evaluator, opts ...Option) *REPL {
-	repl := &REPL{
-		exec:      exec,
-		currentNS: func() string { return "" },
-	}
-
-	for _, option := range withDefaults(opts) {
-		option(repl)
-	}
-
-	return repl
-}
-
 // Evaluator implementation is responsible for executing givenn forms.
 type Evaluator interface {
+	Namespace() string
 	Eval(form core.Any) (core.Any, error)
 }
 
 // REPL implements a read-eval-print loop for a generic Runtime.
 type REPL struct {
-	exec        Evaluator
+	eval        Evaluator
 	input       Input
 	output      io.Writer
 	mapInputErr ErrMapper
-	currentNS   func() string
 	factory     ReaderFactory
 
 	banner      string
@@ -46,6 +31,17 @@ type REPL struct {
 	multiPrompt string
 
 	printer Printer
+}
+
+// New returns a new instance of REPL with given slurp Env. Option values
+// can be used to configure REPL input, output etc.
+func New(eval Evaluator, opts ...Option) *REPL {
+	repl := &REPL{eval: eval}
+	for _, option := range withDefaults(opts) {
+		option(repl)
+	}
+
+	return repl
 }
 
 // Input implementation is used by REPL to read user-input. See WithInput()
@@ -91,7 +87,7 @@ func (repl *REPL) readEvalPrint() error {
 		return nil
 	}
 
-	res, err := evalAll(repl.exec, forms)
+	res, err := evalAll(repl.eval, forms)
 	if err != nil {
 		return repl.print(err)
 	}
@@ -155,7 +151,7 @@ func (repl *REPL) setPrompt(multiline bool) {
 		return
 	}
 
-	nsPrefix := repl.currentNS()
+	nsPrefix := repl.eval.Namespace()
 	prompt := repl.prompt
 
 	if multiline {
@@ -172,10 +168,10 @@ func (repl *REPL) printBanner() {
 	}
 }
 
-func evalAll(exec Evaluator, vals []core.Any) ([]core.Any, error) {
+func evalAll(eval Evaluator, vals []core.Any) ([]core.Any, error) {
 	res := make([]core.Any, 0, len(vals))
 	for _, form := range vals {
-		form, err := exec.Eval(form)
+		form, err := eval.Eval(form)
 		if err != nil {
 			return nil, err
 		}

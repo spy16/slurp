@@ -43,6 +43,13 @@ type Env interface {
 	Child(name string, vars map[string]Any) Env
 }
 
+// NamespaceProvider is an optional interface for Env, that
+// provides support for namespaces.
+type NamespaceProvider interface {
+	// Namespace returns the currently active namespace.
+	Namespace() string
+}
+
 // Analyzer implementation is responsible for performing syntax analysis
 // on given form.
 type Analyzer interface {
