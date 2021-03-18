@@ -15,7 +15,7 @@ import (
 // Evaluator implementation is responsible for executing givenn forms.
 type Evaluator interface {
 	Namespace() string
-	Eval(form core.Any) (core.Any, error)
+	Eval(forms ...core.Any) (core.Any, error)
 }
 
 // REPL implements a read-eval-print loop for a generic Runtime.

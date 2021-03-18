@@ -38,10 +38,18 @@ func New(opt ...Option) *Evaluator {
 // if the environment does not support namespacing.
 func (eval Evaluator) Namespace() string { return eval.ns.Namespace() }
 
-// Eval performs syntax analysis of the given form to produce an Expr and
-// evaluates the Expr for result.
-func (eval Evaluator) Eval(form core.Any) (core.Any, error) {
-	return core.Eval(eval.env, eval.analyzer, form)
+// Eval performs syntax analysis for each of the given forms and evaluates
+// the resulting Exprs for a result.  If more than one form is supplied,
+// it returns the result of the last Expr, or any error encountered along
+// the way.
+func (eval Evaluator) Eval(forms ...core.Any) (res core.Any, err error) {
+	for _, form := range forms {
+		if res, err = core.Eval(eval.env, eval.analyzer, form); err != nil {
+			break
+		}
+	}
+
+	return
 }
 
 // EvalStr reads forms from the given string, evaluates them, and returns
@@ -51,17 +59,12 @@ func (eval Evaluator) EvalStr(s string) (core.Any, error) {
 		return nil, err
 	}
 
-	f, err := eval.reader.All()
+	fs, err := eval.reader.All()
 	if err != nil {
 		return nil, err
 	}
 
-	do, err := builtin.Cons(builtin.Symbol("do"), builtin.NewList(f...))
-	if err != nil {
-		return nil, err
-	}
-
-	return eval.Eval(do)
+	return eval.Eval(fs...)
 }
 
 // Option values can be used with New() to customise slurp instance
