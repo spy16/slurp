@@ -4,12 +4,7 @@ package core
 
 import (
 	"errors"
-	"fmt"
-	"strings"
-	"sync"
 )
-
-const rootEnv = "<main>"
 
 var (
 	// ErrNotFound is returned by Env when a binding is not found
@@ -26,21 +21,47 @@ type Env interface {
 	// Name returns the name of this env frame.
 	Name() string
 
+	// Namespace returns the active namespace.
+	Namespace() Namespace
+
 	// Parent returns the parent/outer env of this env. Returns nil
 	// if this env is the root.
 	Parent() Env
 
-	// Bind creates a local binding with given name and value.
-	Bind(name string, val Any) error
-
-	// Resolve resolves the symbol in this env and return its value
-	// if found. Returns ErrNotFound if name is not found in this
-	// env frame.
-	Resolve(name string) (Any, error)
+	// Scope of the current environment.
+	Scope() Scope
 
 	// Child returns a new env with given frame name and vars bound.
 	// Returned env will have this env as parent/outer.
 	Child(name string, vars map[string]Any) Env
+
+	// WithNamespace returns the named environment, creating it if it does
+	// not already exist.
+	WithNamespace(Namespace) Env
+}
+
+// Scope is a named collection of variable bindings.
+type Scope interface {
+	// Bind creates a local binding with given name and value.
+	Bind(name Symbol, val Any) error
+
+	// Resolve resolves the symbol in this env and return its value
+	// if found. Returns ErrNotFound if name is not found in this
+	// env frame.
+	Resolve(name Symbol) (Any, error)
+}
+
+// Namespace is a string that defaults to "main" when empty.
+type Namespace string
+
+// String returns the namespace, substituting the empty string
+// for "main".
+func (ns Namespace) String() string {
+	if ns == "" {
+		return "main"
+	}
+
+	return string(ns)
 }
 
 // Analyzer implementation is responsible for performing syntax analysis
@@ -79,72 +100,6 @@ func Eval(env Env, analyzer Analyzer, form Any) (Any, error) {
 		return nil, err
 	}
 	return expr.Eval(env)
-}
-
-// New returns a root Env that can be used to execute forms.
-func New(globals map[string]Any) Env {
-	if globals == nil {
-		globals = map[string]Any{}
-	}
-	return &mapEnv{
-		parent: nil,
-		name:   rootEnv,
-		vars:   globals,
-	}
-}
-
-// mapEnv implements Env using a Go native map and RWMutex.
-type mapEnv struct {
-	parent Env
-	name   string
-	mu     sync.RWMutex
-	vars   map[string]Any
-}
-
-func (env *mapEnv) Name() string { return env.name }
-func (env *mapEnv) Parent() Env  { return env.parent }
-
-func (env *mapEnv) Child(name string, vars map[string]Any) Env {
-	if vars == nil {
-		vars = map[string]Any{}
-	}
-	return &mapEnv{
-		name:   name,
-		parent: env,
-		vars:   vars,
-	}
-}
-
-func (env *mapEnv) Bind(name string, val Any) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return fmt.Errorf("%w: %s", ErrInvalidName, name)
-	}
-
-	if env.parent == nil {
-		// only root env is shared between threads. so make sure
-		// concurrent accesses are synchronized.
-		env.mu.Lock()
-		defer env.mu.Unlock()
-	}
-
-	env.vars[name] = val
-	return nil
-}
-
-func (env *mapEnv) Resolve(name string) (Any, error) {
-	if env.parent == nil {
-		// only root env is shared between threads. so make sure
-		// concurrent accesses are synchronized.
-		env.mu.RLock()
-		defer env.mu.RUnlock()
-	}
-
-	v, found := env.vars[name]
-	if !found {
-		return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
-	}
-	return v, nil
 }
 
 type constAnalyzer struct{}

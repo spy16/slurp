@@ -16,7 +16,6 @@ var (
 	_ core.Any = Bool(true)
 	_ core.Any = Char('∂')
 	_ core.Any = String("specimen")
-	_ core.Any = Symbol("specimen")
 	_ core.Any = Keyword("specimen")
 
 	_ core.Comparable = Int64(0)
@@ -26,7 +25,6 @@ var (
 	_ core.EqualityProvider = Bool(false)
 	_ core.EqualityProvider = Char('a')
 	_ core.EqualityProvider = String("specimen")
-	_ core.EqualityProvider = Symbol("specimen")
 	_ core.EqualityProvider = Keyword("specimen")
 )
 
@@ -142,20 +140,6 @@ func (str String) Equals(other core.Any) (bool, error) {
 }
 
 func (str String) String() string { return fmt.Sprintf("\"%s\"", string(str)) }
-
-// Symbol represents a lisp symbol Value.
-type Symbol string
-
-// SExpr returns a valid s-expression representing Symbol.
-func (sym Symbol) SExpr() (string, error) { return string(sym), nil }
-
-// Equals returns true if the other Value is also a symbol and has same Value.
-func (sym Symbol) Equals(other core.Any) (bool, error) {
-	otherSym, isSym := other.(Symbol)
-	return isSym && (sym == otherSym), nil
-}
-
-func (sym Symbol) String() string { return string(sym) }
 
 // Keyword represents a keyword Value.
 type Keyword string

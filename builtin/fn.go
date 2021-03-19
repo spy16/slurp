@@ -33,7 +33,7 @@ func (fn Fn) Invoke(args ...core.Any) (core.Any, error) {
 
 	env := fn.Env.Child(fn.Name, nil)
 	for i, p := range f.Params {
-		if err := env.Bind(p, args[i]); err != nil {
+		if err := env.Scope().Bind(p, args[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -96,7 +96,7 @@ func (fn Fn) selectFunc(args []core.Any) (Func, error) {
 // Func represents a method of specific arity in Fn.
 type Func struct {
 	Body     core.Expr
-	Params   []string
+	Params   []core.Symbol
 	Variadic bool
 }
 
@@ -108,12 +108,12 @@ func (f Func) matchArity(args []core.Any) bool {
 	return argc == len(f.Params)
 }
 
-func (f Func) minArity() int {
-	if len(f.Params) > 0 && f.Variadic {
-		return len(f.Params) - 1
-	}
-	return len(f.Params)
-}
+// func (f Func) minArity() int {
+// 	if len(f.Params) > 0 && f.Variadic {
+// 		return len(f.Params) - 1
+// 	}
+// 	return len(f.Params)
+// }
 
 func (f *Func) compare(other Func) (bool, error) {
 	if f.Variadic != other.Variadic ||

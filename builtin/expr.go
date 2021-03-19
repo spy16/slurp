@@ -33,14 +33,12 @@ func (qe QuoteExpr) Eval(_ core.Env) (core.Any, error) { return qe.Form, nil }
 
 // DefExpr represents the (def name value) binding form.
 type DefExpr struct {
-	Name  string
+	Name  core.Symbol
 	Value core.Expr
 }
 
 // Eval creates the binding with the name and value in Root env.
-func (de DefExpr) Eval(env core.Env) (core.Any, error) {
-	var val core.Any
-	var err error
+func (de DefExpr) Eval(env core.Env) (val core.Any, err error) {
 	if de.Value != nil {
 		val, err = de.Value.Eval(env)
 		if err != nil {
@@ -50,10 +48,10 @@ func (de DefExpr) Eval(env core.Env) (core.Any, error) {
 		val = Nil{}
 	}
 
-	if err := core.Root(env).Bind(de.Name, val); err != nil {
+	if err := core.Root(env).Scope().Bind(de.Name, val); err != nil {
 		return nil, err
 	}
-	return Symbol(de.Name), nil
+	return de.Name, nil
 }
 
 // LetExpr represents the (let [param*] expr*) binding form.
@@ -122,7 +120,7 @@ func (de DoExpr) Eval(env core.Env) (core.Any, error) {
 }
 
 // ResolveExpr resolves a symbol from the given environment.
-type ResolveExpr struct{ Symbol Symbol }
+type ResolveExpr struct{ Symbol core.Symbol }
 
 // Eval resolves the symbol in the given environment or its parent env
 // and returns the result. Returns ErrNotFound if the symbol was not
@@ -131,7 +129,7 @@ func (re ResolveExpr) Eval(env core.Env) (core.Any, error) {
 	var v core.Any
 	var err error
 	for env != nil {
-		v, err = env.Resolve(string(re.Symbol))
+		v, err = env.Scope().Resolve(re.Symbol)
 		if errors.Is(err, core.ErrNotFound) {
 			// not found in the current frame. check parent.
 			env = env.Parent()
@@ -234,4 +232,14 @@ func (vex VectorExpr) Eval(env core.Env) (core.Any, error) {
 	}
 
 	return vex.Vector, nil
+}
+
+// NamespaceExpr modifies a namespace.
+type NamespaceExpr struct {
+	NS core.Namespace
+}
+
+// Eval modifies the designated namespace.
+func (nex NamespaceExpr) Eval(env core.Env) (core.Any, error) {
+	return nex.NS, core.NamespaceInterrupt{Env: env.WithNamespace(nex.NS)}
 }

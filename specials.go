@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
@@ -106,7 +105,7 @@ func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 		return nil, err
 	}
 
-	sym, ok := first.(builtin.Symbol)
+	sym, ok := first.(core.Symbol)
 	if !ok {
 		return nil, e.With(fmt.Sprintf(
 			"first arg must be symbol, not '%s'", reflect.TypeOf(first)))
@@ -128,7 +127,7 @@ func parseDef(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
 	}
 
 	return builtin.DefExpr{
-		Name:  string(sym),
+		Name:  sym,
 		Value: res,
 	}, nil
 }
@@ -199,7 +198,7 @@ func parseLetBindings(a core.Analyzer, env core.Env, seq core.Seq, le *builtin.L
 	return core.ForEach(seq, func(item core.Any) (bool, error) {
 		// symbol?
 		if len(le.Names)%2 == 0 {
-			s, ok := item.(builtin.Symbol)
+			s, ok := item.(core.Symbol)
 			if !ok {
 				return false, core.Error{
 					Cause:   fmt.Errorf("%w: let", ErrParseSpecial),
@@ -207,7 +206,14 @@ func parseLetBindings(a core.Analyzer, env core.Env, seq core.Seq, le *builtin.L
 				}
 			}
 
-			le.Names = append(le.Names, string(s))
+			if s.Qualified() {
+				return false, core.Error{
+					Cause:   fmt.Errorf("%s: let", ErrParseSpecial),
+					Message: fmt.Sprintf("cannot bind fully-qualified symbol '%s' to local scope", s),
+				}
+			}
+
+			le.Names = append(le.Names, s.String())
 			return false, nil
 		}
 
@@ -288,8 +294,8 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 	}
 
 	i := 0
-	if sym, ok := args[i].(builtin.Symbol); ok {
-		fn.Name = strings.TrimSpace(sym.String())
+	if sym, ok := args[i].(core.Symbol); ok {
+		fn.Name = sym.String()
 		i++
 	}
 
@@ -311,19 +317,28 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 	fnEnv := env.Child(fn.Name, nil)
 	argSet := map[string]struct{}{}
 	err = core.ForEach(fnArgs, func(item core.Any) (bool, error) {
-		sym, ok := item.(builtin.Symbol)
+		sym, ok := item.(core.Symbol)
 		if !ok {
 			return true, fmt.Errorf(
 				"expecting parameter to be a symbol, got '%s'",
 				reflect.TypeOf(item))
 		}
-		if _, found := argSet[string(sym)]; found {
+
+		if sym.Qualified() {
+			return false, core.Error{
+				Cause:   ErrParseSpecial,
+				Message: fmt.Sprintf("cannot bind fully-qualified symbol '%s' to local scope", sym),
+			}
+		}
+
+		symName := sym.String()
+		if _, found := argSet[symName]; found {
 			return true, fmt.Errorf("duplicate arg name '%s'", sym)
 		}
-		argSet[string(sym)] = struct{}{}
-		f.Params = append(f.Params, string(sym))
+		argSet[symName] = struct{}{}
+		f.Params = append(f.Params, sym)
 
-		if err := fnEnv.Bind(string(sym), nil); err != nil {
+		if err := fnEnv.Scope().Bind(sym, nil); err != nil {
 			return false, err
 		}
 
@@ -349,4 +364,37 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 	fn.Funcs = append(fn.Funcs, f)
 
 	return &fn, nil
+}
+
+// parseNS
+func parseNS(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+	e := core.Error{Cause: fmt.Errorf("%w: ns", ErrParseSpecial)}
+	if args == nil {
+		return nil, e.With("requires exactly 2 args, got 0")
+	}
+	cnt, err := args.Count()
+	if err != nil {
+		return nil, err
+	}
+	if cnt != 1 {
+		return nil, e.With("requires exactly 1 arg, got 0")
+	}
+
+	any, err := args.First()
+	if err != nil {
+		return nil, err
+	}
+
+	sym, ok := any.(core.Symbol)
+	if !ok {
+		return nil, e.With(fmt.Sprintf("expected symbol, got %s", reflect.ValueOf(any)))
+	}
+
+	if !sym.Valid() || sym.Qualified() {
+		return nil, e.With(fmt.Sprintf("%s: %s", core.ErrInvalidName, sym))
+	}
+
+	return builtin.NamespaceExpr{
+		NS: core.Namespace(sym.String()),
+	}, nil
 }
