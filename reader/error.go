@@ -36,20 +36,18 @@ func (e Error) Unwrap() error { return e.Cause }
 func (e Error) Error() string { return fmt.Sprintf("ReaderError: %v", e.Cause) }
 
 func (e Error) Format(s fmt.State, verb rune) {
-	if !s.Flag('#') {
-		fmt.Fprint(s, e.Error())
-		return
+	if s.Flag('#') {
+		/*
+		* File "<REPL>" line 1, column 2
+		* ReaderError:  unmatched delimiter ']'
+		 */
+		fmt.Fprintf(s, "File \"%s\" line %d, column %d\n",
+			e.Begin.File,
+			e.Begin.Ln,
+			e.Begin.Col)
 	}
 
-	/*
-	 * File "<REPL>" line 1, column 2
-	 * ReaderError:  unmatched delimiter ']'
-	 */
-	fmt.Fprintf(s, "File \"%s\" line %d, column %d\n",
-		e.Begin.File,
-		e.Begin.Ln,
-		e.Begin.Col)
-	fmt.Fprintf(s, "ReaderError: %s", e.Error())
+	fmt.Fprint(s, e.Error())
 }
 
 type unmatchedDelimiterError rune
