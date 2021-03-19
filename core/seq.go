@@ -65,17 +65,7 @@ func SeqString(seq Seq, begin, end, sep string) (string, error) {
 	var b strings.Builder
 	b.WriteString(begin)
 	err := ForEach(seq, func(item Any) (bool, error) {
-		if se, ok := item.(SExpressable); ok {
-			s, err := se.SExpr()
-			if err != nil {
-				return false, err
-			}
-			b.WriteString(s)
-
-		} else {
-			b.WriteString(fmt.Sprintf("%v", item))
-		}
-
+		b.WriteString(fmt.Sprintf("%v", item))
 		b.WriteString(sep)
 		return false, nil
 	})

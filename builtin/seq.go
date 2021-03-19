@@ -49,14 +49,6 @@ type LinkedList struct {
 	rest  core.Seq
 }
 
-// SExpr returns a valid s-expression for LinkedList.
-func (ll *LinkedList) SExpr() (string, error) {
-	if ll == nil {
-		return "()", nil
-	}
-	return core.SeqString(ll, "(", ")", " ")
-}
-
 // Conj returns a new list with all the items added at the head of the list.
 func (ll *LinkedList) Conj(items ...core.Any) (res core.Seq, err error) {
 	res = ll

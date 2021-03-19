@@ -1,9 +1,10 @@
-package builtin
+package builtin_test
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,12 +21,12 @@ func TestVectorIsHashable(t *testing.T) {
 	}()
 
 	m := make(map[core.Vector]struct{})
-	m[EmptyVector] = struct{}{}
+	m[builtin.EmptyVector] = struct{}{}
 }
 
 func TestSeqToVector(t *testing.T) {
-	seq := NewList(Int64(0), Keyword("keyword"), String("string"))
-	v, err := SeqToVector(seq)
+	seq := builtin.NewList(builtin.Int64(0), builtin.Keyword("keyword"), builtin.String("string"))
+	v, err := builtin.SeqToVector(seq)
 	require.NoError(t, err)
 	require.NotNil(t, v)
 
@@ -43,15 +44,11 @@ func TestSeqToVector(t *testing.T) {
 func TestEmptyVector(t *testing.T) {
 	t.Parallel()
 
-	require.NotZero(t, EmptyVector,
+	require.NotZero(t, builtin.EmptyVector,
 		"zero-value empty vector is invalid (shift is missing)")
 
-	t.Run("SExpr", func(t *testing.T) {
-		testSExpr(t, EmptyVector, "[]")
-	})
-
 	t.Run("Seq", func(t *testing.T) {
-		seq, err := EmptyVector.Seq()
+		seq, err := builtin.EmptyVector.Seq()
 		assert.NoError(t, err)
 		assert.NotNil(t, seq)
 	})
@@ -59,16 +56,16 @@ func TestEmptyVector(t *testing.T) {
 	t.Run("Count", func(t *testing.T) {
 		t.Parallel()
 
-		cnt, err := EmptyVector.Count()
+		cnt, err := builtin.EmptyVector.Count()
 		assert.NoError(t, err)
-		assert.Zero(t, cnt, "EmptyVector has a non-zero count")
+		assert.Zero(t, cnt, "builtin.EmptyVector has a non-zero count")
 	})
 
 	t.Run("EntryAt", func(t *testing.T) {
 		t.Parallel()
 
-		v, err := EmptyVector.EntryAt(0)
-		assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
+		v, err := builtin.EmptyVector.EntryAt(0)
+		assert.ErrorIs(t, err, builtin.ErrIndexOutOfBounds)
 		assert.Nil(t, v)
 	})
 
@@ -76,14 +73,14 @@ func TestEmptyVector(t *testing.T) {
 		t.Parallel()
 
 		t.Run("PersistentVector", func(t *testing.T) {
-			v, err := EmptyVector.Assoc(9001, Nil{})
-			assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
+			v, err := builtin.EmptyVector.Assoc(9001, builtin.Nil{})
+			assert.ErrorIs(t, err, builtin.ErrIndexOutOfBounds)
 			assert.Nil(t, v)
 		})
 
 		t.Run("TransientVector", func(t *testing.T) {
-			v, err := EmptyVector.Transient().Assoc(9001, Nil{})
-			assert.EqualError(t, err, ErrIndexOutOfBounds.Error())
+			v, err := builtin.EmptyVector.Transient().Assoc(9001, builtin.Nil{})
+			assert.ErrorIs(t, err, builtin.ErrIndexOutOfBounds)
 			assert.Nil(t, v)
 		})
 	})
@@ -94,28 +91,21 @@ func TestPersistentVector(t *testing.T) {
 
 	as := make([]core.Any, size)
 	for i := 0; i < size; i++ {
-		as[i] = Int64(i)
+		as[i] = builtin.Int64(i)
 	}
-
-	t.Run("SExpr", func(t *testing.T) {
-		t.Parallel()
-
-		testSExpr(t, NewVector(Int64(0), Keyword("keyword"), String("string")),
-			"[0 :keyword \"string\"]")
-	})
 
 	t.Run("Conj", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("Nop", func(t *testing.T) {
-			v, err := EmptyVector.Conj()
+			v, err := builtin.EmptyVector.Conj()
 			require.NoError(t, err)
 			require.NotNil(t, v)
-			assert.Equal(t, EmptyVector, v)
+			assert.Equal(t, builtin.EmptyVector, v)
 		})
 
 		t.Run("PersistentConj", func(t *testing.T) {
-			v, err := EmptyVector.Conj(Nil{})
+			v, err := builtin.EmptyVector.Conj(builtin.Nil{})
 			require.NoError(t, err)
 			require.NotNil(t, v)
 
@@ -125,7 +115,7 @@ func TestPersistentVector(t *testing.T) {
 		})
 
 		t.Run("TransientConj", func(t *testing.T) {
-			v, err := EmptyVector.Conj(as...)
+			v, err := builtin.EmptyVector.Conj(as...)
 			require.NoError(t, err)
 			require.NotNil(t, v)
 
@@ -148,7 +138,7 @@ func TestPersistentVector(t *testing.T) {
 		t.Parallel()
 
 		var err error
-		var v core.Vector = EmptyVector
+		var v core.Vector = builtin.EmptyVector
 		for i, any := range as {
 			v, err = v.Assoc(i, any)
 			require.NoError(t, err, "Assoc() failed")
@@ -169,22 +159,22 @@ func TestPersistentVector(t *testing.T) {
 	t.Run("Replace", func(t *testing.T) {
 		t.Parallel()
 
-		v := NewVector(as...)
+		v := builtin.NewVector(as...)
 		for i := range as {
-			vPrime, err := v.Assoc(i, Nil{})
+			vPrime, err := v.Assoc(i, builtin.Nil{})
 			assert.NoError(t, err)
 			assert.NotNil(t, vPrime)
 
 			val, err := vPrime.EntryAt(i)
 			assert.NoError(t, err)
-			assert.Equal(t, Nil{}, val)
+			assert.Equal(t, builtin.Nil{}, val)
 		}
 	})
 
 	t.Run("Pop", func(t *testing.T) {
 		t.Parallel()
 
-		var v core.Vector = NewVector(as...)
+		var v core.Vector = builtin.NewVector(as...)
 
 		cnt, err := v.Count()
 		require.NoError(t, err, "test precondition failed")
@@ -206,7 +196,7 @@ func TestPersistentVector(t *testing.T) {
 	})
 
 	t.Run("Seq", func(t *testing.T) {
-		seq, err := EmptyVector.Seq()
+		seq, err := builtin.EmptyVector.Seq()
 		require.NoError(t, err)
 		require.NotNil(t, seq)
 
@@ -229,6 +219,7 @@ func TestPersistentVector(t *testing.T) {
 			i++
 			return false, nil
 		})
+		require.NoError(t, err)
 	})
 }
 
@@ -237,13 +228,13 @@ func TestTransientVector(t *testing.T) {
 
 	as := make([]core.Any, size)
 	for i := 0; i < size; i++ {
-		as[i] = Int64(i)
+		as[i] = builtin.Int64(i)
 	}
 
 	t.Run("NewTransientVector", func(t *testing.T) {
 		t.Parallel()
 
-		v := NewVector(as...).Transient()
+		v := builtin.NewVector(as...).Transient()
 		assert.NotNil(t, v)
 
 		cnt, err := v.Count()
@@ -252,17 +243,10 @@ func TestTransientVector(t *testing.T) {
 
 	})
 
-	t.Run("SExpr", func(t *testing.T) {
-		t.Parallel()
-
-		vec := NewVector(Int64(0), Keyword("keyword"), String("string")).Transient()
-		testSExpr(t, vec, "[0 :keyword \"string\"]")
-	})
-
 	t.Run("Count", func(t *testing.T) {
 		t.Parallel()
 
-		v := NewVector(as...).Transient()
+		v := builtin.NewVector(as...).Transient()
 
 		cnt, err := v.Count()
 		assert.NoError(t, err)
@@ -272,7 +256,7 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Conj", func(t *testing.T) {
 		t.Parallel()
 
-		v, err := EmptyVector.Transient().Conj(as...)
+		v, err := builtin.EmptyVector.Transient().Conj(as...)
 		require.NoError(t, err)
 		require.NotNil(t, v)
 
@@ -292,23 +276,23 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Append", func(t *testing.T) {
 		t.Parallel()
 
-		v := EmptyVector.Transient()
+		v := builtin.EmptyVector.Transient()
 
 		for i := 0; i < size; i++ {
-			vPrime, err := v.Assoc(i, Int64(i))
+			vPrime, err := v.Assoc(i, builtin.Int64(i))
 			require.NoError(t, err, "Assoc() failed")
 			require.NotNil(t, vPrime, "Assoc() returned a nil vector")
 
 			val, err := v.EntryAt(i)
 			require.NoError(t, err, "EntryAt() failed")
 			require.NotNil(t, val, "EntryAt() returned a nil value")
-			require.Equal(t, Int64(i), val,
+			require.Equal(t, builtin.Int64(i), val,
 				"value recovered does not match associated value")
 
 			val, err = vPrime.EntryAt(i)
 			require.NoError(t, err, "EntryAt() failed")
 			require.NotNil(t, val, "EntryAt() returned a nil value")
-			require.Equal(t, Int64(i), val,
+			require.Equal(t, builtin.Int64(i), val,
 				"value recovered does not match associated value")
 
 			cnt, err := v.Count()
@@ -324,26 +308,26 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Replace", func(t *testing.T) {
 		t.Parallel()
 
-		var v core.Vector = NewVector(as...).Transient()
+		var v core.Vector = builtin.NewVector(as...).Transient()
 		for i := range as {
-			vPrime, err := v.Assoc(i, Nil{})
+			vPrime, err := v.Assoc(i, builtin.Nil{})
 			assert.NoError(t, err)
 			assert.NotNil(t, vPrime)
 
 			val, err := v.EntryAt(i)
 			assert.NoError(t, err)
-			assert.Equal(t, Nil{}, val)
+			assert.Equal(t, builtin.Nil{}, val)
 
 			val, err = vPrime.EntryAt(i)
 			assert.NoError(t, err)
-			assert.Equal(t, Nil{}, val)
+			assert.Equal(t, builtin.Nil{}, val)
 		}
 	})
 
 	t.Run("Pop", func(t *testing.T) {
 		t.Parallel()
 
-		var v core.Vector = NewVector(as...).Transient()
+		var v core.Vector = builtin.NewVector(as...).Transient()
 
 		cnt, err := v.Count()
 		require.NoError(t, err, "test precondition failed")
@@ -369,7 +353,7 @@ func TestTransientVector(t *testing.T) {
 	})
 
 	t.Run("Seq", func(t *testing.T) {
-		v := NewVector(as...).Transient()
+		v := builtin.NewVector(as...).Transient()
 		seq, err := v.Seq()
 		require.NoError(t, err)
 
@@ -394,14 +378,14 @@ func TestTransientVector(t *testing.T) {
 	t.Run("Invariants", func(t *testing.T) {
 		t.Parallel()
 
-		v := EmptyVector.Transient()
-		v.Conj(Nil{})
+		v := builtin.EmptyVector.Transient()
+		v.Conj(builtin.Nil{})
 
-		assert.NotEqual(t, EmptyVector, v,
-			"derived transient mutated EmptyVector")
+		assert.NotEqual(t, builtin.EmptyVector, v,
+			"derived transient mutated builtin.EmptyVector")
 
-		assert.Equal(t, EmptyVector, EmptyVector.Transient().Persistent(),
-			"persistent() ∘ Transient() ∘ persistent() ∘ EmptyVector != EmptyVector")
+		assert.Equal(t, builtin.EmptyVector, builtin.EmptyVector.Transient().Persistent(),
+			"persistent() ∘ Transient() ∘ persistent() ∘ builtin.EmptyVector != builtin.EmptyVector")
 	})
 }
 
@@ -442,14 +426,14 @@ type benchSuite interface {
 
 type persistentUnoptimized struct{ vec core.Vector }
 
-func (suite *persistentUnoptimized) Setup(b *testing.B) { suite.vec = EmptyVector }
+func (suite *persistentUnoptimized) Setup(b *testing.B) { suite.vec = builtin.EmptyVector }
 
 func (suite *persistentUnoptimized) Teardown() {}
 
 func (suite *persistentUnoptimized) BenchmarkConj(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// call Conj() one item at a time to avoid triggering transient optimization.
-		suite.vec, _ = suite.vec.Conj(Int64(i))
+		suite.vec, _ = suite.vec.Conj(builtin.Int64(i))
 	}
 }
 
@@ -459,11 +443,11 @@ type persistentOptimized struct {
 }
 
 func (suite *persistentOptimized) Setup(b *testing.B) {
-	suite.vec = EmptyVector
+	suite.vec = builtin.EmptyVector
 
 	suite.items = make([]core.Any, b.N)
 	for i := 0; i < b.N; i++ {
-		suite.items[i] = Int64(i)
+		suite.items[i] = builtin.Int64(i)
 	}
 }
 
@@ -476,7 +460,7 @@ func (suite *persistentOptimized) BenchmarkConj(b *testing.B) {
 type transientUnbatched struct{ vec core.Vector }
 
 func (suite *transientUnbatched) Setup(b *testing.B) {
-	suite.vec = EmptyVector.Transient()
+	suite.vec = builtin.EmptyVector.Transient()
 }
 
 func (suite *transientUnbatched) Teardown() {}
@@ -484,7 +468,7 @@ func (suite *transientUnbatched) Teardown() {}
 func (suite *transientUnbatched) BenchmarkConj(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// call Conj() one item at a time to avoid triggering transient optimization.
-		suite.vec, _ = suite.vec.Conj(Int64(i))
+		suite.vec, _ = suite.vec.Conj(builtin.Int64(i))
 	}
 }
 
@@ -494,11 +478,11 @@ type transientBatched struct {
 }
 
 func (suite *transientBatched) Setup(b *testing.B) {
-	suite.vec = EmptyVector.Transient()
+	suite.vec = builtin.EmptyVector.Transient()
 
 	suite.items = make([]core.Any, b.N)
 	for i := 0; i < b.N; i++ {
-		suite.items[i] = Int64(i)
+		suite.items[i] = builtin.Int64(i)
 	}
 }
 

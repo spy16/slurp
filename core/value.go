@@ -27,13 +27,6 @@ type Invokable interface {
 	Invoke(args ...Any) (Any, error)
 }
 
-// SExpressable forms can be rendered as s-expressions.
-type SExpressable interface {
-	// SExpr returns a parsable s-expression of the given value. Returns
-	// error if not possible.
-	SExpr() (string, error)
-}
-
 // Comparable values define a partial ordering.
 type Comparable interface {
 	// Comp(pare) the value to another value.  Returns:
