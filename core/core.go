@@ -4,6 +4,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -117,7 +118,7 @@ func (env *mapEnv) Child(name string, vars map[string]Any) Env {
 func (env *mapEnv) Bind(name string, val Any) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return Error{Cause: ErrInvalidName, Message: name}
+		return fmt.Errorf("%w: %s", ErrInvalidName, name)
 	}
 
 	if env.parent == nil {
@@ -141,7 +142,7 @@ func (env *mapEnv) Resolve(name string) (Any, error) {
 
 	v, found := env.vars[name]
 	if !found {
-		return nil, Error{Cause: ErrNotFound, Message: name}
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
 	}
 	return v, nil
 }

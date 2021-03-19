@@ -43,9 +43,9 @@ func (r *Renderer) Print(val interface{}) (err error) {
 
 	switch val.(type) {
 	case error:
-		_, err = fmt.Fprintf(r.Err, "%#v\n", val)
+		_, err = fmt.Fprintf(r.Err, "%#s\n", val)
 	default:
-		_, err = fmt.Fprintf(r.Out, "%#v\n", val)
+		_, err = fmt.Fprintf(r.Out, "%#s\n", val)
 	}
 
 	return
