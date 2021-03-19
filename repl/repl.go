@@ -71,6 +71,7 @@ func (repl *REPL) readEvalPrint() error {
 	forms, err := repl.read()
 	if err != nil {
 		switch err.(type) {
+		case core.NamespaceInterrupt:
 		case reader.Error:
 			_ = repl.output.Print(err)
 		default:
