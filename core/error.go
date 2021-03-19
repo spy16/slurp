@@ -8,10 +8,8 @@ import (
 // Error is returned by all slurp operations. Cause indicates the underlying
 // error type. Use errors.Is() with Cause to check for specific errors.
 type Error struct {
-	Message    string
-	Cause      error
-	Form       string
-	Begin, End Position
+	Cause   error
+	Message string
 }
 
 // With returns a clone of the error with message set to given value.
@@ -30,24 +28,19 @@ func (e Error) Unwrap() error { return e.Cause }
 
 func (e Error) Error() string {
 	if e.Cause != nil {
-		return fmt.Sprintf("%v: %s", e.Cause, e.Message)
+		return fmt.Sprintf("EvalError: %v: %s", e.Cause, e.Message)
 	}
-	return e.Message
+
+	return fmt.Sprintf("EvalError: %s", e.Message)
 }
 
-// Position represents the positional information about a value read
-// by reader.
-type Position struct {
-	File string
-	Ln   int
-	Col  int
-}
-
-func (p Position) String() string {
-	if p.File == "" {
-		p.File = "<unknown>"
+func (e Error) Format(s fmt.State, verb rune) {
+	if !s.Flag('#') {
+		fmt.Fprint(s, e.Error())
 	}
-	return fmt.Sprintf("%s:%d:%d", p.File, p.Ln, p.Col)
+
+	// TODO:  render the offending form.
+	fmt.Fprint(s, e.Error())
 }
 
 type NamespaceInterrupt struct{ Env Env }

@@ -14,11 +14,6 @@ var (
 	// that more data is needed to complete the current form.
 	ErrEOF = errors.New("unexpected EOF while parsing")
 
-	// ErrUnmatchedDelimiter is returned when a reader macro encounters a closing
-	// container- delimiter without a corresponding opening delimiter (e.g. ']'
-	// but no '[').
-	ErrUnmatchedDelimiter = errors.New("unmatched delimiter")
-
 	// ErrNumberFormat is returned when a reader macro encounters a illegally
 	// formatted numerical form.
 	ErrNumberFormat = errors.New("invalid number format")
@@ -28,9 +23,7 @@ var (
 // some issue. Use errors.Is() with Cause to check for specific underlying
 // errors.
 type Error struct {
-	Form       string
 	Cause      error
-	Rune       rune
 	Begin, End Position
 }
 
@@ -40,11 +33,25 @@ func (e Error) Is(other error) bool { return errors.Is(e.Cause, other) }
 // Unwrap returns the underlying cause of the error.
 func (e Error) Unwrap() error { return e.Cause }
 
-func (e Error) Error() string {
-	cause := e.Cause
-	if errors.Is(cause, ErrUnmatchedDelimiter) {
-		cause = fmt.Errorf("unmatched delimiter '%c'", e.Rune)
+func (e Error) Error() string { return fmt.Sprintf("ReaderError: %v", e.Cause) }
+
+func (e Error) Format(s fmt.State, verb rune) {
+	if s.Flag('#') {
+		/*
+		* File "<REPL>" line 1, column 2
+		* ReaderError:  unmatched delimiter ']'
+		 */
+		fmt.Fprintf(s, "File \"%s\" line %d, column %d\n",
+			e.Begin.File,
+			e.Begin.Ln,
+			e.Begin.Col)
 	}
 
-	return fmt.Sprintf("error while reading: %v", cause)
+	fmt.Fprint(s, e.Error())
+}
+
+type unmatchedDelimiterError rune
+
+func (r unmatchedDelimiterError) Error() string {
+	return fmt.Sprintf("unmatched delimiter '%c'", r)
 }
