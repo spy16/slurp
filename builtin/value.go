@@ -59,6 +59,21 @@ func (i64 Int64) Comp(other core.Any) (int, error) {
 
 func (i64 Int64) String() string { return strconv.Itoa(int(i64)) }
 
+func (i64 Int64) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'd':
+		fmt.Fprint(s, i64.String())
+
+	default:
+		if s.Flag('#') {
+			fmt.Fprintf(s, "%#v", int64(i64))
+			return
+		}
+
+		fmt.Fprintf(s, "%v", int64(i64))
+	}
+}
+
 // Float64 represents a 64-bit double precision floating point Value.
 type Float64 float64
 
@@ -79,10 +94,30 @@ func (f64 Float64) Comp(other core.Any) (int, error) {
 }
 
 func (f64 Float64) String() string {
-	if math.Abs(float64(f64)) >= 1e16 {
-		return fmt.Sprintf("%e", f64)
+	if f64 == 0 {
+		return "0."
 	}
-	return fmt.Sprintf("%f", f64)
+
+	if math.Abs(float64(f64)) >= 1e16 {
+		return fmt.Sprintf("%e", float64(f64))
+	}
+
+	return fmt.Sprintf("%f", float64(f64))
+}
+
+func (f64 Float64) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'f':
+		fmt.Fprint(s, f64.String())
+
+	default:
+		if s.Flag('#') {
+			fmt.Fprintf(s, "%#v", float64(f64))
+			return
+		}
+
+		fmt.Fprintf(s, "%v", float64(f64))
+	}
 }
 
 // Bool represents a boolean Value.

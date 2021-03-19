@@ -2,6 +2,8 @@ package builtin_test
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/spy16/slurp/builtin"
@@ -43,6 +45,76 @@ func TestIsTruthy(t *testing.T) {
 	assert.True(t, builtin.IsTruthy(10))
 	assert.False(t, builtin.IsTruthy(nil))
 	assert.False(t, builtin.IsTruthy(false))
+}
+
+func TestFormat(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		any          core.Any
+		pretty, sxpr string
+	}{
+		{
+			any:    builtin.Nil{},
+			pretty: "nil",
+			sxpr:   "nil",
+		},
+		{
+			any:    builtin.Int64(0),
+			pretty: "0",
+			sxpr:   "0",
+		},
+		{
+			any:    builtin.Float64(0),
+			pretty: "0.",
+			sxpr:   "0.",
+		},
+		{
+			any:    builtin.Float64(1e16),
+			pretty: "1e16",
+			sxpr:   "1e16",
+		},
+		{
+			any:    builtin.Float64(-.2),
+			pretty: "-.2",
+			sxpr:   "-.2",
+		},
+		{
+			any:    builtin.Bool(false),
+			pretty: "false",
+			sxpr:   "false",
+		},
+		{
+			any:    builtin.Bool(true),
+			pretty: "true",
+			sxpr:   "true",
+		},
+		{
+			any:    builtin.Char('🧠'),
+			pretty: "\\🧠",
+			sxpr:   "\\🧠",
+		},
+		{
+			any:    builtin.String("foo"),
+			pretty: "\"foo\"",
+			sxpr:   "\"foo\"",
+		},
+		{
+			any:    builtin.Symbol("foo"),
+			pretty: "foo",
+			sxpr:   "foo",
+		},
+	} {
+		t.Run(reflect.TypeOf(tt.any).String(), func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.pretty, fmt.Sprintf("%s", tt.any),
+				"invalid pretty-print output")
+
+			assert.Equal(t, tt.sxpr, fmt.Sprintf("%#s", tt.any),
+				"invalid symbolic expression")
+		})
+	}
 }
 
 func assertEq(t *testing.T, want, got core.Any, msgAndArgs ...interface{}) {

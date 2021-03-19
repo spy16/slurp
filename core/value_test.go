@@ -1,11 +1,11 @@
 package core_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCompare(t *testing.T) {
@@ -55,12 +55,11 @@ func TestCompare(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			got, err := core.Compare(tt.a, tt.b)
 			if tt.wantErr != nil {
-				assert(t, errors.Is(err, tt.wantErr),
-					"wantErr=%#v\ngot=%#v", tt.wantErr, err)
-				assert(t, got == 0, "want=0 got=%d", got)
+				assert.ErrorIs(t, err, tt.wantErr)
+				assert.Zero(t, got)
 			} else {
-				assert(t, err == nil, "unexpected error: %#v", err)
-				assert(t, tt.want == got, "want=%d got=%d", tt.want, got)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -123,12 +122,11 @@ func TestEq(t *testing.T) {
 		t.Run(tt.title, func(t *testing.T) {
 			got, err := core.Eq(tt.a, tt.b)
 			if tt.wantErr != nil {
-				assert(t, errors.Is(tt.wantErr, err),
-					"wantErr=%#v\ngotErr=%#v", tt.wantErr, err)
+				assert.ErrorIs(t, err, tt.wantErr)
 			} else {
-				assert(t, err == nil, "unexpected err: %#v", err)
+				assert.NoError(t, err)
 			}
-			assert(t, tt.want == got, "want=%t, got=%t", tt.want, got)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -167,8 +165,8 @@ func (fc fakeComparable) Comp(other core.Any) (int, error) {
 	}
 }
 
-func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
-	if !cond {
-		t.Errorf(msg, args...)
-	}
-}
+// func assert(t *testing.T, cond bool, msg string, args ...interface{}) {
+// 	if !cond {
+// 		t.Errorf(msg, args...)
+// 	}
+// }
