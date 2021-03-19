@@ -31,7 +31,7 @@ var globals = map[string]core.Any{
 }
 
 func main() {
-	env := builtin.NewEnv(globals)
+	env := builtin.NewEnv(builtin.WithNamespace("", globals))
 	eval := slurp.New(slurp.WithEnv(env))
 
 	r := repl.New(eval,

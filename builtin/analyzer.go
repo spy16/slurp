@@ -34,7 +34,7 @@ func (ba Analyzer) Analyze(env core.Env, form core.Any) (core.Expr, error) {
 	}
 
 	switch f := exp.(type) {
-	case Symbol:
+	case core.Symbol:
 		return ResolveExpr{Symbol: f}, nil
 
 	case core.Vector:
@@ -67,8 +67,8 @@ func (ba Analyzer) analyzeSeq(env core.Env, seq core.Seq) (core.Expr, error) {
 	// The call target may be a special form.  In this case, we need to get the
 	// corresponding parser function, which will take care of parsing/analyzing
 	// the tail.
-	if sym, ok := first.(Symbol); ok {
-		if parse, found := ba.Specials[string(sym)]; found {
+	if sym, ok := first.(core.Symbol); ok && !sym.Qualified() {
+		if parse, found := ba.Specials[sym.String()]; found {
 			next, err := seq.Next()
 			if err != nil {
 				return nil, err
@@ -117,7 +117,7 @@ func macroExpand1(env core.Env, form core.Any) (core.Any, error) {
 	}
 
 	var target core.Any
-	sym, ok := first.(Symbol)
+	sym, ok := first.(core.Symbol)
 	if ok {
 		v, err := ResolveExpr{Symbol: sym}.Eval(env)
 		if err != nil {

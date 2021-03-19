@@ -14,7 +14,7 @@ import (
 
 // Evaluator implementation is responsible for executing givenn forms.
 type Evaluator interface {
-	Namespace() string
+	CurrentNS() string
 	Eval(forms ...core.Any) (core.Any, error)
 }
 
@@ -151,7 +151,7 @@ func (repl *REPL) setPrompt(multiline bool) {
 		return
 	}
 
-	nsPrefix := repl.eval.Namespace()
+	nsPrefix := repl.eval.CurrentNS()
 	prompt := repl.prompt
 
 	if multiline {

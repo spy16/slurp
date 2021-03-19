@@ -14,10 +14,10 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 	t.Parallel()
 
 	hundredFunc := fakeFn{}
-	e := builtin.NewEnv(map[string]core.Any{
+	e := builtin.NewEnv(builtin.WithNamespace("", map[string]core.Any{
 		"foo":     builtin.Keyword("hello"),
 		"hundred": hundredFunc,
-	})
+	}))
 
 	table := []struct {
 		title   string
@@ -48,7 +48,7 @@ func TestBuiltinAnalyzer_Analyze(t *testing.T) {
 			form:  builtin.NewList(builtin.Symbol("hundred"), 1),
 			want: builtin.InvokeExpr{
 				Name:   "hundred",
-				Target: builtin.ResolveExpr{Symbol: "hundred"},
+				Target: builtin.ResolveExpr{Symbol: builtin.Symbol("hundred")},
 				Args:   []core.Expr{builtin.ConstExpr{Const: 1}},
 			},
 		},
@@ -83,7 +83,7 @@ func TestBultinAnalyzer_Analyze_Vector(t *testing.T) {
 	vec := builtin.NewVector(builtin.Symbol("foo"))
 
 	var ba builtin.Analyzer
-	expr, err := ba.Analyze(builtin.NewEnv(nil), vec)
+	expr, err := ba.Analyze(builtin.NewEnv(), vec)
 	require.NoError(t, err)
 	require.IsType(t, builtin.VectorExpr{}, expr)
 	assert.Equal(t, vec, expr.(builtin.VectorExpr).Vector)

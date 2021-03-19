@@ -8,32 +8,76 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRoot(t *testing.T) {
-	root := builtin.NewEnv(nil)
-	child := root.Child("foo", nil)
-	got := core.Root(child)
-	require.NotEqual(t, child, got, "expecting root, got child")
-	require.Equal(t, root, got, "returned env is not root")
-	require.Equal(t, root.Name(), got.Name(), "wrong name for root env")
-}
+func TestRootEnv(t *testing.T) {
+	t.Parallel()
 
-func Test_Env_Bind_Resolve(t *testing.T) {
-	var v core.Any
-	var err error
+	t.Run("Child", func(t *testing.T) {
+		t.Parallel()
 
-	env := builtin.NewEnv(map[string]core.Any{"foo": "bar"})
+		root := builtin.NewEnv()
+		require.NotEmpty(t, root.Name(), "namespace must not be empty")
 
-	err = env.Bind("v", 1000)
-	require.NoError(t, err)
+		child := root.Child("foo", nil)
+		got := core.Root(child)
+		require.NotEqual(t, child, got, "expecting root, got child")
+		require.Equal(t, root.Name(), got.Name(), "wrong name for root env")
+	})
 
-	err = env.Bind("", 1000)
-	require.ErrorIs(t, err, core.ErrInvalidName)
+	t.Run("BindResolve", func(t *testing.T) {
+		t.Parallel()
 
-	v, err = env.Resolve("foo")
-	require.NoError(t, err)
-	require.Equal(t, "bar", v)
+		var v core.Any
+		var err error
 
-	v, err = env.Resolve("non-existent")
-	require.ErrorIs(t, err, core.ErrNotFound)
-	require.Nil(t, v)
+		env := builtin.NewEnv(builtin.WithNamespace("", map[string]core.Any{"foo": "bar"}))
+		require.Equal(t, "<main>", env.Name())
+
+		err = env.Scope().Bind(builtin.Symbol("v"), 1000)
+		require.NoError(t, err)
+
+		err = env.Scope().Bind(builtin.Symbol(""), 1000)
+		require.ErrorIs(t, err, core.ErrInvalidName)
+
+		v, err = env.Scope().Resolve(builtin.Symbol("foo"))
+		require.NoError(t, err)
+		require.Equal(t, "bar", v)
+
+		v, err = env.Scope().Resolve(builtin.Symbol("non-existent"))
+		require.ErrorIs(t, err, core.ErrNotFound)
+		require.Nil(t, v)
+	})
+
+	t.Run("WithNamespace", func(t *testing.T) {
+		t.Parallel()
+
+		var v core.Any
+		var err error
+
+		root := builtin.NewEnv(builtin.WithNamespace("", map[string]core.Any{"foo": "bar"}))
+		test := root.WithNamespace("test")
+
+		t.Run("Name", func(t *testing.T) {
+			// ensure root and test have the expected names
+			require.Equal(t, core.Namespace("test"), test.Namespace())
+			require.NotEqual(t, core.Namespace("test"), root.Namespace())
+		})
+
+		t.Run("Resolve", func(t *testing.T) {
+			// ensure root can still access its bound variables.
+			v, err = root.Scope().Resolve(builtin.Symbol("foo"))
+			require.NoError(t, err)
+			require.Equal(t, "bar", v)
+
+			// ensure test cannot access the default namespace
+			v, err = test.Scope().Resolve(builtin.Symbol("foo"))
+			require.ErrorIs(t, err, core.ErrNotFound)
+			require.Nil(t, v)
+
+			// ensure fully-qualified symbol names can be resolved
+			v, err = test.Scope().Resolve(builtin.Symbol(".main.foo"))
+			require.NoError(t, err)
+			require.Equal(t, "bar", v)
+		})
+
+	})
 }

@@ -63,7 +63,7 @@ func conj(vs ...core.Any) (core.Any, error) {
 }
 
 func main() {
-	env := builtin.NewEnv(globals)
+	env := builtin.NewEnv(builtin.WithNamespace("", globals))
 	eval := slurp.New(slurp.WithEnv(env))
 
 	r := repl.New(eval,

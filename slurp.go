@@ -4,6 +4,7 @@ package slurp
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/spy16/slurp/builtin"
 	"github.com/spy16/slurp/core"
@@ -16,7 +17,6 @@ type Evaluator struct {
 	buf      *bytes.Buffer
 	reader   *reader.Reader
 	analyzer core.Analyzer
-	ns       core.NamespaceProvider
 }
 
 // New slurp evaluator.
@@ -34,19 +34,25 @@ func New(opt ...Option) *Evaluator {
 	return eval
 }
 
-// Namespace returns the current namespace.  It returns an empty string
-// if the environment does not support namespacing.
-func (eval Evaluator) Namespace() string { return eval.ns.Namespace() }
+// CurrentNS returns the active namespace.
+func (eval Evaluator) CurrentNS() string { return eval.env.Namespace().String() }
 
 // Eval performs syntax analysis for each of the given forms and evaluates
 // the resulting Exprs for a result.  If more than one form is supplied,
 // it returns the result of the last Expr, or any error encountered along
 // the way.
-func (eval Evaluator) Eval(forms ...core.Any) (res core.Any, err error) {
+func (eval *Evaluator) Eval(forms ...core.Any) (res core.Any, err error) {
+	var ns core.NamespaceInterrupt
 	for _, form := range forms {
-		if res, err = core.Eval(eval.env, eval.analyzer, form); err != nil {
-			break
+		if res, err = core.Eval(eval.env, eval.analyzer, form); err == nil {
+			continue
 		}
+
+		if errors.As(err, &ns) {
+			eval.env = ns.Env
+		}
+
+		break
 	}
 
 	return
@@ -75,17 +81,11 @@ type Option func(eval *Evaluator)
 // env is nil, the default map-env will be used.
 func WithEnv(env core.Env) Option {
 	if env == nil {
-		env = builtin.NewEnv(nil)
-	}
-
-	ns, ok := env.(core.NamespaceProvider)
-	if !ok {
-		ns = nopNS{}
+		env = builtin.NewEnv()
 	}
 
 	return func(eval *Evaluator) {
 		eval.env = env
-		eval.ns = ns
 	}
 }
 
@@ -105,6 +105,7 @@ func WithAnalyzer(a core.Analyzer) Option {
 					"let":   parseLet,
 					"macro": parseMacro,
 					"quote": parseQuote,
+					"ns":    parseNS,
 				},
 			}
 		}
@@ -118,7 +119,3 @@ func withDefaults(opts []Option) []Option {
 		WithEnv(nil),
 	}, opts...)
 }
-
-type nopNS struct{}
-
-func (nopNS) Namespace() string { return "" }

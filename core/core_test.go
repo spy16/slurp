@@ -24,21 +24,21 @@ func TestEval(t *testing.T) {
 	}{
 		{
 			title:    "WithNilAnalyzer",
-			env:      builtin.NewEnv(nil),
+			env:      builtin.NewEnv(),
 			analyzer: nil,
 			form:     100,
 			want:     100,
 		},
 		{
 			title:    "WithCustomAnalyzer",
-			env:      builtin.NewEnv(nil),
+			env:      builtin.NewEnv(),
 			analyzer: fakeAnalyzer{Res: "foo"},
 			form:     100,
 			want:     "foo",
 		},
 		{
 			title:    "WithAnalyzerError",
-			env:      builtin.NewEnv(nil),
+			env:      builtin.NewEnv(),
 			analyzer: fakeAnalyzer{Err: errUnknown},
 			form:     100,
 			want:     nil,

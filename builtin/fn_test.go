@@ -12,13 +12,13 @@ func TestFn_Invoke(t *testing.T) {
 	t.Parallel()
 
 	specimen := Fn{
-		Env:  NewEnv(nil),
+		Env:  NewEnv(),
 		Name: "foo",
 		Funcs: []Func{
 			{
 				Variadic: false,
-				Params:   []string{"arg0"},
-				Body:     &ResolveExpr{"arg0"},
+				Params:   []core.Symbol{Symbol("arg0")},
+				Body:     &ResolveExpr{Symbol("arg0")},
 			},
 		},
 		Macro: false,

@@ -49,3 +49,7 @@ func (p Position) String() string {
 	}
 	return fmt.Sprintf("%s:%d:%d", p.File, p.Ln, p.Col)
 }
+
+type NamespaceInterrupt struct{ Env Env }
+
+func (NamespaceInterrupt) Error() string { return "namespace interrupt" }
