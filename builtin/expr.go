@@ -234,14 +234,12 @@ func (vex VectorExpr) Eval(env core.Env) (core.Any, error) {
 	return vex.Vector, nil
 }
 
-// // NamespaceExpr modifies a namespace.
-// type NamespaceExpr struct {
-// 	NS string
-// 	Do DoExpr
-// }
+// NamespaceExpr modifies a namespace.
+type NamespaceExpr struct {
+	NS core.Namespace
+}
 
-// // Eval modifies the designated namespace.
-// func (nex NamespaceExpr) Eval(env core.Env) (core.Any, error) {
-// 	panic("NOT IMPLEMENTED")
-// 	// return nex.Do.Eval(env.WithNamespace(nex.NS))
-// }
+// Eval modifies the designated namespace.
+func (nex NamespaceExpr) Eval(env core.Env) (core.Any, error) {
+	return nex.NS, core.NamespaceInterrupt{Env: env.WithNamespace(nex.NS)}
+}

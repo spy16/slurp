@@ -367,6 +367,34 @@ func parseFnDef(a core.Analyzer, env core.Env, argSeq core.Seq) (*builtin.Fn, er
 }
 
 // parseNS
-func parseNS(a core.Analyzer, env core.Env, argSeq core.Seq) (core.Expr, error) {
-	panic("NOT IMPLEMENTED")
+func parseNS(a core.Analyzer, env core.Env, args core.Seq) (core.Expr, error) {
+	e := core.Error{Cause: fmt.Errorf("%w: ns", ErrParseSpecial)}
+	if args == nil {
+		return nil, e.With("requires exactly 2 args, got 0")
+	}
+	cnt, err := args.Count()
+	if err != nil {
+		return nil, err
+	}
+	if cnt != 1 {
+		return nil, e.With("requires exactly 1 arg, got 0")
+	}
+
+	any, err := args.First()
+	if err != nil {
+		return nil, err
+	}
+
+	sym, ok := any.(core.Symbol)
+	if !ok {
+		return nil, e.With(fmt.Sprintf("expected symbol, got %s", reflect.ValueOf(any)))
+	}
+
+	if !sym.Valid() || sym.Qualified() {
+		return nil, e.With(fmt.Sprintf("%s: %s", core.ErrInvalidName, sym))
+	}
+
+	return builtin.NamespaceExpr{
+		NS: core.Namespace(sym.String()),
+	}, nil
 }
