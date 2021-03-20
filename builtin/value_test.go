@@ -108,10 +108,10 @@ func TestFormat(t *testing.T) {
 		t.Run(reflect.TypeOf(tt.any).String(), func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.pretty, fmt.Sprintf("%s", tt.any),
+			assert.Equal(t, tt.pretty, fmt.Sprintf("%#s", tt.any),
 				"invalid pretty-print output")
 
-			assert.Equal(t, tt.sxpr, fmt.Sprintf("%#s", tt.any),
+			assert.Equal(t, tt.sxpr, fmt.Sprintf("%s", tt.any),
 				"invalid symbolic expression")
 		})
 	}
