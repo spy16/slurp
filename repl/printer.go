@@ -45,7 +45,9 @@ func (r *Renderer) Print(val interface{}) (err error) {
 	case error:
 		_, err = fmt.Fprintf(r.Err, "%#s\n", val)
 	default:
-		_, err = fmt.Fprintf(r.Out, "%#s\n", val)
+		// Values should be represented as an s-expression
+		// to avoid ambiguity between similar values (e.g. symbol vs string)
+		_, err = fmt.Fprintf(r.Out, "%s\n", val)
 	}
 
 	return

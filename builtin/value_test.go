@@ -66,18 +66,18 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			any:    builtin.Float64(0),
-			pretty: "0.",
-			sxpr:   "0.",
+			pretty: "0",
+			sxpr:   "0",
 		},
 		{
 			any:    builtin.Float64(1e16),
-			pretty: "1e16",
-			sxpr:   "1e16",
+			pretty: "1e+16",
+			sxpr:   "1e+16",
 		},
 		{
 			any:    builtin.Float64(-.2),
-			pretty: "-.2",
-			sxpr:   "-.2",
+			pretty: "-0.2",
+			sxpr:   "-0.2",
 		},
 		{
 			any:    builtin.Bool(false),
@@ -96,7 +96,7 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			any:    builtin.String("foo"),
-			pretty: "\"foo\"",
+			pretty: "foo",
 			sxpr:   "\"foo\"",
 		},
 		{
@@ -106,13 +106,11 @@ func TestFormat(t *testing.T) {
 		},
 	} {
 		t.Run(reflect.TypeOf(tt.any).String(), func(t *testing.T) {
-			t.Parallel()
+			assert.Equal(t, tt.sxpr, fmt.Sprintf("%s", tt.any),
+				"invalid symbolic expression")
 
 			assert.Equal(t, tt.pretty, fmt.Sprintf("%#s", tt.any),
 				"invalid pretty-print output")
-
-			assert.Equal(t, tt.sxpr, fmt.Sprintf("%s", tt.any),
-				"invalid symbolic expression")
 		})
 	}
 }

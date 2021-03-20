@@ -156,7 +156,14 @@ func (str String) Equals(other core.Any) (bool, error) {
 	return isStr && (otherStr == str), nil
 }
 
-func (str String) String() string { return fmt.Sprintf("\"%s\"", string(str)) }
+func (str String) Format(s fmt.State, verb rune) {
+	if verb == 's' && s.Flag('#') {
+		fmt.Fprintf(s, "%s", string(str))
+		return
+	}
+
+	fmt.Fprintf(s, "%#v", string(str))
+}
 
 // Symbol represents a lisp symbol Value.
 type Symbol string
