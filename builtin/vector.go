@@ -76,16 +76,6 @@ func (v PersistentVector) Transient() *TransientVector {
 // Count returns the number of elements contained in the Vector.
 func (v PersistentVector) Count() (int, error) { return v.cnt, nil }
 
-// SExpr returns a parsable s-expression for the Vector.
-func (v PersistentVector) SExpr() (string, error) {
-	if v.cnt == 0 {
-		return "[]", nil
-	}
-
-	seq, _ := v.Seq()
-	return core.SeqString(seq, "[", "]", " ")
-}
-
 func (v PersistentVector) tailoff() int {
 	if v.cnt < width {
 		return 0
@@ -429,9 +419,6 @@ type TransientVector PersistentVector
 func (t TransientVector) Persistent() PersistentVector { return PersistentVector(t) }
 
 func (t TransientVector) tailoff() int { return PersistentVector(t).tailoff() }
-
-// SExpr returns an s-expression for the vector.
-func (t TransientVector) SExpr() (string, error) { return PersistentVector(t).SExpr() }
 
 // Count the number of elements in the vector.
 func (t TransientVector) Count() (int, error) { return t.cnt, nil }

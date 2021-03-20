@@ -108,12 +108,12 @@ func (f Func) matchArity(args []core.Any) bool {
 	return argc == len(f.Params)
 }
 
-func (f Func) minArity() int {
-	if len(f.Params) > 0 && f.Variadic {
-		return len(f.Params) - 1
-	}
-	return len(f.Params)
-}
+// func (f Func) minArity() int {
+// 	if len(f.Params) > 0 && f.Variadic {
+// 		return len(f.Params) - 1
+// 	}
+// 	return len(f.Params)
+// }
 
 func (f *Func) compare(other Func) (bool, error) {
 	if f.Variadic != other.Variadic ||

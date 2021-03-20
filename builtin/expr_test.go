@@ -91,7 +91,7 @@ func TestDefExpr_Eval(t *testing.T) {
 				return DefExpr{Name: "foo"}, core.New(nil)
 			},
 			want: Symbol("foo"),
-			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
+			assert: func(t *testing.T, got core.Any, _ error, env core.Env) {
 				v, err := env.Resolve("foo")
 				assert.NoError(t, err)
 				assert.Equal(t, Nil{}, v)
@@ -116,7 +116,7 @@ func TestDefExpr_Eval(t *testing.T) {
 				}, core.New(nil)
 			},
 			want: Symbol("foo"),
-			assert: func(t *testing.T, got core.Any, err error, env core.Env) {
+			assert: func(t *testing.T, got core.Any, _ error, env core.Env) {
 				v, err := env.Resolve("foo")
 				assert.NoError(t, err)
 				assert.Equal(t, 10, v)
