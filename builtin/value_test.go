@@ -104,6 +104,16 @@ func TestFormat(t *testing.T) {
 			pretty: "foo",
 			sxpr:   "foo",
 		},
+		{
+			any:    builtin.NewList(builtin.Keyword("foo")),
+			pretty: "(:foo)",
+			sxpr:   "(:foo)",
+		},
+		{
+			any:    builtin.NewVector(builtin.Keyword("foo")),
+			pretty: "[:foo]",
+			sxpr:   "[:foo]",
+		},
 	} {
 		t.Run(reflect.TypeOf(tt.any).String(), func(t *testing.T) {
 			assert.Equal(t, tt.sxpr, fmt.Sprintf("%s", tt.any),
