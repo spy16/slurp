@@ -274,7 +274,7 @@ func (rd *Reader) Token(init rune) (string, error) {
 
 // Container reads multiple forms until 'end' rune is reached. Should be used to read
 // collection types like List etc. formType is only used to annotate errors.
-func (rd Reader) Container(end rune, formType string, f func(core.Any) error) error {
+func (rd *Reader) Container(end rune, formType string, f func(core.Any) error) error {
 	for {
 		if err := rd.SkipSpaces(); err != nil {
 			if err == io.EOF {
