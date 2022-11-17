@@ -1,7 +1,9 @@
 # Slurp
 
 
-[![GoDoc](https://godoc.org/github.com/spy16/slurp?status.svg)](https://godoc.org/github.com/spy16/slurp) [![Go Report Card](https://goreportcard.com/badge/github.com/spy16/slurp)](https://goreportcard.com/report/github.com/spy16/slurp) ![Go](https://github.com/spy16/slurp/workflows/Go/badge.svg?branch=master)
+[![GoDoc](https://godoc.org/github.com/spy16/slurp?status.svg)](https://godoc.org/github.com/spy16/slurp)
+[![Go Report Card](https://goreportcard.com/badge/github.com/spy16/slurp)](https://goreportcard.com/report/github.com/spy16/slurp)
+[![Code Change](https://github.com/spy16/slurp/actions/workflows/code_change.yml/badge.svg)](https://github.com/spy16/slurp/actions/workflows/code_change.yml)
 
 Slurp is a highly customisable, embeddable LISP toolkit for `Go` applications.
 
