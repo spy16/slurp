@@ -49,7 +49,7 @@ We hope that you will find Slurp to be powerful, useful and fun to use.  We look
   3. unicode literals (e.g., `\u00A5` for `¥` etc.)
 * Full interoperability with Go:  call native Go functions/libraries, and manipulate native Go datatypes from your language.
 * Support for macros.
-* Easy to extend. See [Extending](#extending).
+* Easy to extend. See [Wiki](https://github.com/spy16/slurp/wiki/Customizing-Syntax).
 * Tiny & powerful REPL package.
 * Zero dependencies (outside of tests).
 
