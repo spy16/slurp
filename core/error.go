@@ -42,3 +42,7 @@ func (e Error) Format(s fmt.State, verb rune) {
 	// TODO:  render the offending form.
 	fmt.Fprint(s, e.Error())
 }
+
+type NamespaceInterrupt struct{ Env Env }
+
+func (NamespaceInterrupt) Error() string { return "namespace interrupt" }

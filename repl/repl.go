@@ -14,12 +14,13 @@ import (
 
 // Evaluator implementation is responsible for executing givenn forms.
 type Evaluator interface {
-	Eval(form core.Any) (core.Any, error)
+	CurrentNS() string
+	Eval(forms ...core.Any) (core.Any, error)
 }
 
 // REPL implements a read-eval-print loop for a generic Runtime.
 type REPL struct {
-	exec        Evaluator
+	eval        Evaluator
 	input       Input
 	output      Printer
 	mapInputErr ErrMapper
@@ -34,9 +35,8 @@ type REPL struct {
 
 // New returns a new instance of REPL with given slurp Env. Option values
 // can be used to configure REPL input, output etc.
-func New(exec Evaluator, opts ...Option) *REPL {
-	repl := &REPL{exec: exec}
-
+func New(eval Evaluator, opts ...Option) *REPL {
+	repl := &REPL{eval: eval}
 	for _, option := range withDefaults(opts) {
 		option(repl)
 	}
@@ -71,6 +71,7 @@ func (repl *REPL) readEvalPrint() error {
 	forms, err := repl.read()
 	if err != nil {
 		switch err.(type) {
+		case core.NamespaceInterrupt:
 		case reader.Error:
 			_ = repl.output.Print(err)
 		default:
@@ -82,7 +83,7 @@ func (repl *REPL) readEvalPrint() error {
 		return nil
 	}
 
-	res, err := evalAll(repl.exec, forms)
+	res, err := evalAll(repl.eval, forms)
 	if err != nil {
 		return repl.output.Print(err)
 	}
@@ -128,16 +129,12 @@ func (repl *REPL) read() ([]core.Any, error) {
 	}
 }
 
-func (repl *REPL) currentNS() string {
-	return "" // stub
-}
-
 func (repl *REPL) setPrompt(multiline bool) {
 	if repl.prompter == nil || repl.prompt == "" {
 		return
 	}
 
-	nsPrefix := repl.currentNS()
+	nsPrefix := repl.eval.CurrentNS()
 	prompt := repl.prompt
 
 	if multiline {
@@ -154,10 +151,10 @@ func (repl *REPL) printBanner() {
 	}
 }
 
-func evalAll(exec Evaluator, vals []core.Any) ([]core.Any, error) {
+func evalAll(eval Evaluator, vals []core.Any) ([]core.Any, error) {
 	res := make([]core.Any, 0, len(vals))
 	for _, form := range vals {
-		form, err := exec.Eval(form)
+		form, err := eval.Eval(form)
 		if err != nil {
 			return nil, err
 		}

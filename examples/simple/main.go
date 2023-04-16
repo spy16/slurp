@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/spy16/slurp"
 	"github.com/spy16/slurp/builtin"
@@ -33,13 +31,10 @@ var globals = map[string]core.Any{
 }
 
 func main() {
-	env := slurp.New()
-	if err := env.Bind(globals); err != nil {
-		fmt.Printf("bind failed: %+v\n", err)
-		os.Exit(1)
-	}
+	env := builtin.NewEnv(builtin.WithNamespace("", globals))
+	eval := slurp.New(slurp.WithEnv(env))
 
-	r := repl.New(env,
+	r := repl.New(eval,
 		repl.WithBanner("Welcome to slurp!"),
 		repl.WithPrompts(">>", " |"))
 

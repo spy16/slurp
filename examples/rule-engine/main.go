@@ -41,9 +41,10 @@ func runDiscountingRule(rule string, user string) (bool, error) {
 		"current-user":        user,
 	}
 
-	ins := slurp.New()
-	_ = ins.Bind(globals)
-	shouldDiscount, err := ins.EvalStr(rule)
+	env := builtin.NewEnv(builtin.WithNamespace("", globals))
+	eval := slurp.New(slurp.WithEnv(env))
+
+	shouldDiscount, err := eval.EvalStr(rule)
 	return builtin.IsTruthy(shouldDiscount), err
 }
 

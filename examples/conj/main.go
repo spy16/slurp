@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 
 	"github.com/spy16/slurp"
@@ -64,13 +63,10 @@ func conj(vs ...core.Any) (core.Any, error) {
 }
 
 func main() {
-	env := slurp.New()
-	if err := env.Bind(globals); err != nil {
-		fmt.Printf("bind failed: %+v\n", err)
-		os.Exit(1)
-	}
+	env := builtin.NewEnv(builtin.WithNamespace("", globals))
+	eval := slurp.New(slurp.WithEnv(env))
 
-	r := repl.New(env,
+	r := repl.New(eval,
 		repl.WithBanner("Welcome to slurp!\nTry typing '(conj [] 1)'."),
 		repl.WithPrompts(">>", " |"))
 
